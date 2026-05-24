@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ study_pack.title }}</title>
+    <style>
+        {% include 'styles.css' %}
+    </style>
+</head>
+<body>
+
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <div class="cover-badge">EXAM SLAYER V2 PREPARATION PACK</div>
+        <h1 class="cover-title">{{ study_pack.title }}</h1>
+        <div class="divider"></div>
+        <div class="cover-subtitle">COMPILATION & REVISION NOTEBOOK</div>
+        <div style="margin-top: 50mm; font-size: 8.5pt; color: #94a3b8; font-family: sans-serif;">
+            Generated on 2026-05-24 • All Key Diagrams Extracted & Embedded
+        </div>
+    </div>
+
+    <!-- Content Sections -->
+    {% for section in study_pack.sections %}
+    <div class="section-container">
+        <h2 class="section-title">{{ section.heading }}</h2>
+        
+        <!-- Summary Box -->
+        {% if section.summary_html and section.summary_html.strip() %}
+        <div class="summary-card">
+            <div class="summary-title">Topic Summary</div>
+            <div>{{ section.summary_html | safe }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Simple Explanation / Analogy Box -->
+        {% if section.simple_explanation_html and section.simple_explanation_html.strip() %}
+        <div class="analogy-box">
+            <div class="analogy-title">💡 Intuitive Explanation & Analogy</div>
+            <div>{{ section.simple_explanation_html | safe }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Key Points Section (Filtered to prevent empty bullets) -->
+        {% if section.key_points_html %}
+        <div class="key-points-container">
+            <div class="key-points-title">Key Learning Points</div>
+            <ul class="key-points-list">
+                {% for point in section.key_points_html %}
+                <li class="key-point-item">{{ point | safe }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Exam Tip Warning Box -->
+        {% if section.exam_tip_html and section.exam_tip_html.strip() %}
+        <div class="exam-tip-box">
+            <div class="exam-tip-header">🎯 EXAM TIP / TRAP ALERT</div>
+            <div class="exam-tip-content">{{ section.exam_tip_html | safe }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Memory Trick -->
+        {% if section.memory_trick_html and section.memory_trick_html.strip() %}
+        <div class="memory-box">
+            <div class="memory-title">🔑 Memory Aid / Trick</div>
+            <div class="memory-content">{{ section.memory_trick_html | safe }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Common Mistakes (Filtered to prevent empty bullets) -->
+        {% if section.common_mistakes_html %}
+        <div class="mistakes-box">
+            <div class="mistakes-title">⚠️ Common Student Pitfalls</div>
+            <ul class="mistakes-list">
+                {% for mistake in section.common_mistakes_html %}
+                <li class="mistake-item">{{ mistake | safe }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Revision Cheatsheet (Filtered to prevent empty bullets) -->
+        {% if section.revision_cheatsheet_html %}
+        <div class="cheatsheet-box">
+            <div class="cheatsheet-title">⚡ Fast Revision Cheatsheet</div>
+            <ul class="cheatsheet-list">
+                {% for cheat_html in section.revision_cheatsheet_html %}
+                <li class="cheatsheet-item">{{ cheat_html | safe }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Likely Exam Questions (2, 5, 10 Marks) (Filtered to prevent empty bullets) -->
+        {% if section.likely_questions_2_marks_html or section.likely_questions_5_marks_html or section.likely_questions_10_marks_html %}
+        <div class="questions-container">
+            <div class="questions-section-title">📝 Likely Exam Questions</div>
+            
+            {% if section.likely_questions_2_marks_html %}
+                {% for q in section.likely_questions_2_marks_html %}
+                <div class="question-card">
+                    <span class="question-badge badge-2marks">2 MARKS - SHORT ANSWER</span>
+                    <div class="question-text">{{ q | safe }}</div>
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% if section.likely_questions_5_marks_html %}
+                {% for q in section.likely_questions_5_marks_html %}
+                <div class="question-card">
+                    <span class="question-badge badge-5marks">5 MARKS - MEDIUM EXPLANATION</span>
+                    <div class="question-text">{{ q | safe }}</div>
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% if section.likely_questions_10_marks_html %}
+                {% for q in section.likely_questions_10_marks_html %}
+                <div class="question-card">
+                    <span class="question-badge badge-10marks">10 MARKS - LONG ESSAY / ANALYSIS</span>
+                    <div class="question-text">{{ q | safe }}</div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <!-- Embedded Assets -->
+        {% if section.embedded_assets %}
+            {% for asset in section.embedded_assets %}
+            <div class="image-container">
+                <img class="embedded-image" src="{{ assets_dir_url }}/{{ asset }}" alt="Extracted Graphic">
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    {% endfor %}
+
+</body>
+</html>

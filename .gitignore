@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment
+.env
+.env.*
+
+# Generated app data
+backend/uploads/
+backend/assets/
+backend/outputs/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Temp/test
+temp/
+tmp/
+*.log

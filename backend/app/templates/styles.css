@@ -1,0 +1,376 @@
+/* Page setup for standard A4 printing */
+@page {
+    size: A4;
+    margin: 20mm 15mm 20mm 15mm;
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 8pt;
+        color: #94a3b8;
+    }
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #334155;
+    line-height: 1.6;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #0f172a;
+    font-weight: 700;
+    margin-top: 0;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+/* Cover Title Page design */
+.cover-page {
+    page-break-after: always;
+    text-align: center;
+    padding-top: 50mm;
+    padding-bottom: 20mm;
+}
+
+.cover-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: #6366f1;
+    color: #ffffff;
+    border-radius: 9999px;
+    font-size: 9pt;
+    font-weight: 700;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+}
+
+.cover-title {
+    font-size: 30pt;
+    color: #1e1b4b;
+    margin-bottom: 5px;
+    font-weight: 800;
+    line-height: 1.2;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.divider {
+    height: 4px;
+    width: 100px;
+    background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
+    margin: 25px auto;
+    border-radius: 9999px;
+}
+
+.cover-subtitle {
+    font-size: 12pt;
+    color: #4f46e5;
+    margin-bottom: 40px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* Sections details layout - Controlled page breaks */
+.section-container {
+    margin-bottom: 20mm;
+    page-break-before: always;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Exclude the first section from creating an additional page break after cover */
+.section-container:first-of-type {
+    page-break-before: avoid;
+}
+
+.section-title {
+    font-size: 17pt;
+    color: #1e1b4b;
+    border-left: 5px solid #6366f1;
+    padding-left: 12px;
+    margin-top: 10mm;
+    margin-bottom: 18px;
+    font-weight: 700;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+/* Summary Box */
+.summary-card {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.summary-title {
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+/* Simple Explanation Box (Intuitive Analogies) */
+.analogy-box {
+    background-color: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.analogy-title {
+    font-weight: 800;
+    color: #15803d;
+    font-size: 9pt;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+/* Key learning points */
+.key-points-container {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.key-points-title {
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 8px;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.key-points-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.key-point-item {
+    margin-bottom: 6px;
+    color: #334155;
+}
+
+/* Premium Exam Tip Callout Box */
+.exam-tip-box {
+    background-color: #fffbeb;
+    border-left: 4px solid #d97706;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.exam-tip-header {
+    font-weight: 800;
+    color: #b45309;
+    font-size: 9pt;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.exam-tip-content {
+    color: #78350f;
+    font-style: italic;
+}
+
+/* Common Mistakes (Danger Card) */
+.mistakes-box {
+    background-color: #fff1f2;
+    border-left: 4px solid #e11d48;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.mistakes-title {
+    font-weight: 800;
+    color: #be123c;
+    font-size: 9pt;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.mistakes-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.mistake-item {
+    margin-bottom: 4px;
+    color: #9f1239;
+}
+
+/* Memory Trick (Sticky note style) */
+.memory-box {
+    background-color: #faf5ff;
+    border: 1px dashed #c084fc;
+    border-left: 4px solid #9333ea;
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.memory-title {
+    font-weight: 800;
+    color: #7e22ce;
+    font-size: 9pt;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.memory-content {
+    color: #581c87;
+    font-weight: 500;
+}
+
+/* Revision Cheatsheet */
+.cheatsheet-box {
+    background-color: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.cheatsheet-title {
+    font-weight: 800;
+    color: #0369a1;
+    font-size: 9pt;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.cheatsheet-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.cheatsheet-item {
+    margin-bottom: 4px;
+    color: #0c4a6e;
+    font-size: 9.5pt;
+}
+
+/* Question Sections */
+.questions-container {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.questions-section-title {
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 8px;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.question-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    position: relative;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.question-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 7.5pt;
+    font-weight: 700;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    page-break-after: avoid;
+    break-after: avoid;
+}
+
+.badge-2marks {
+    background-color: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.badge-5marks {
+    background-color: #e0e7ff;
+    color: #4338ca;
+    border: 1px solid #c7d2fe;
+}
+
+.badge-10marks {
+    background-color: #fae8ff;
+    color: #a21caf;
+    border: 1px solid #f5d0fe;
+}
+
+.question-text {
+    font-weight: 500;
+    color: #0f172a;
+}
+
+/* Embedded extracted image sizing and center alignment */
+.image-container {
+    text-align: center;
+    margin: 20px 0;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.embedded-image {
+    max-width: 100%;
+    max-height: 90mm;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+}
