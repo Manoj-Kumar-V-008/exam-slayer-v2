@@ -4,24 +4,24 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 163 78% 31%;
+    --background: 240 10% 3.9%; /* zinc-950 */
+    --foreground: 240 5% 96%;   /* zinc-100 */
+    --card: 240 10% 5.9%;       /* zinc-900 */
+    --card-foreground: 240 5% 96%;
+    --primary: 250 84% 54%;     /* indigo-600 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 216 30% 94%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 216 30% 94%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 28 90% 56%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 163 78% 31%;
-    --radius: 0.5rem;
+    --secondary: 240 3.7% 15.9%; /* zinc-800 */
+    --secondary-foreground: 240 5% 96%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%; /* zinc-400 */
+    --accent: 250 84% 54%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 240 5% 96%;
+    --border: 240 3.7% 15.9% / 0.4; /* zinc-800/40 */
+    --input: 240 3.7% 15.9%;
+    --ring: 250 84% 54%;
+    --radius: 0.75rem;
   }
 
   * {
@@ -29,10 +29,18 @@
   }
 
   body {
-    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    @apply min-h-screen bg-background font-sans text-foreground antialiased selection:bg-indigo-500/30 selection:text-white;
   }
 
   a {
     @apply text-inherit;
   }
 }
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+

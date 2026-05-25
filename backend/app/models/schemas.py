@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 class JobStatus(str, Enum):
     PENDING = "pending"
@@ -13,32 +13,92 @@ class JobStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
 
+class ProductMode(str, Enum):
+    STUDY_PACK = "STUDY_PACK"
+    ANSWER_PACK = "ANSWER_PACK"
+
+class SolvedQuestion(BaseModel):
+    question_number: str = Field(..., description="The numbering or label of the question (e.g. 'Question 1', 'Question 2(a)').")
+    question_text: str = Field(..., description="The full wording of the question extracted from the question bank.")
+    
+    # New suggested fields
+    marks_category: Optional[str] = Field(None, description="The estimated or explicit marks category (e.g. '2 Marks', '5 Marks', '10 Marks').")
+    answer: str = Field("", description="The comprehensive, exam-ready answer, tailored based on the provided study notes.")
+    quick_revision: List[str] = Field(default_factory=list, description="Key summary points/bullets for quick revision of this specific question.")
+    memory_trick: Optional[str] = Field(None, description="A memory aid (mnemonic, acronym, etc.) to help remember this answer if relevant.")
+    related_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
+    
+    # Legacy compatibility fields (for frontend)
+    likely_marks: Optional[str] = Field(None, description="The estimated or explicit marks category (e.g. '2 Marks', '5 Marks', '10 Marks').")
+    ideal_answer: str = Field("", description="The comprehensive, exam-ready answer, tailored based on the provided study notes.")
+    revision_points: List[str] = Field(default_factory=list, description="Key summary points/bullets for quick revision of this specific question.")
+    embedded_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
+    
+    simple_explanation: str = Field(..., description="A simple background explanation or breakdown of the answer for intuitive learning.")
+
+    @model_validator(mode='after')
+    def sync_compatibility_fields(self) -> 'SolvedQuestion':
+        # Sync answer -> ideal_answer
+        if self.answer and not self.ideal_answer:
+            self.ideal_answer = self.answer
+        elif self.ideal_answer and not self.answer:
+            self.answer = self.ideal_answer
+
+        # Sync marks_category -> likely_marks
+        if self.marks_category and not self.likely_marks:
+            self.likely_marks = self.marks_category
+        elif self.likely_marks and not self.marks_category:
+            self.marks_category = self.likely_marks
+
+        # Sync quick_revision -> revision_points
+        if self.quick_revision and not self.revision_points:
+            self.revision_points = self.quick_revision
+        elif self.revision_points and not self.quick_revision:
+            self.quick_revision = self.revision_points
+
+        # Sync related_assets -> embedded_assets
+        if self.related_assets and not self.embedded_assets:
+            self.embedded_assets = self.related_assets
+        elif self.embedded_assets and not self.related_assets:
+            self.related_assets = self.embedded_assets
+
+        return self
+
+class AnswerPack(BaseModel):
+    title: str = Field(..., description="The main subject or title of the answer pack.")
+    questions: List[SolvedQuestion] = Field(..., description="The list of solved questions.")
+
 class Section(BaseModel):
-    heading: str = Field(..., description="The heading of this study section.")
-    summary: str = Field(..., description="Detailed content summary of the topic.")
-    simple_explanation: str = Field(..., description="A simple, intuitive explanation of the concept using analogies or everyday examples.")
-    key_points: List[str] = Field(default_factory=list, description="A list of key concepts, formulas, or facts to remember.")
-    exam_tip: Optional[str] = Field(None, description="An essential note or hint to help students excel in exams.")
-    likely_questions_2_marks: List[str] = Field(default_factory=list, description="Likely short-answer 2-mark exam questions on this topic.")
-    likely_questions_5_marks: List[str] = Field(default_factory=list, description="Likely medium-answer 5-mark exam questions on this topic.")
-    likely_questions_10_marks: List[str] = Field(default_factory=list, description="Likely essay-style or computational 10-mark exam questions on this topic.")
-    common_mistakes: List[str] = Field(default_factory=list, description="Common mistakes students make when answering questions on this topic.")
-    memory_trick: Optional[str] = Field(None, description="A mnemonic, acronym, or memory trick to remember key terms or concepts.")
-    revision_cheatsheet: List[str] = Field(default_factory=list, description="Quick summary points or checklists for fast revision right before the exam.")
-    embedded_assets: List[str] = Field(default_factory=list, description="List of image/diagram filenames that should be rendered in this section (e.g. img_01.png).")
+    heading: str = Field(..., description="The main heading for this topic section.")
+    summary: str = Field(..., description="A concise, high-level summary of the concept.")
+    simple_explanation: str = Field(..., description="An intuitive explanation or plain-English analogy of the concept.")
+    key_points: List[str] = Field(default_factory=list, description="Key bullet points for core learning.")
+    exam_tip: Optional[str] = Field(None, description="Tip/advice for exams, pitfalls, or trap alerts.")
+    likely_questions_2_marks: List[str] = Field(default_factory=list, description="Likely short-answer questions (2 marks).")
+    likely_questions_5_marks: List[str] = Field(default_factory=list, description="Likely medium-length questions (5 marks).")
+    likely_questions_10_marks: List[str] = Field(default_factory=list, description="Likely essay/long questions (10 marks).")
+    common_mistakes: List[str] = Field(default_factory=list, description="Common student mistakes or misunderstandings.")
+    memory_trick: Optional[str] = Field(None, description="Memory aid (mnemonic, acronym, etc.) to help remember this concept.")
+    revision_cheatsheet: List[str] = Field(default_factory=list, description="Short summary/bullet list for quick cheatsheet review.")
+    embedded_assets: List[str] = Field(default_factory=list, description="Diagram filenames from study notes relevant to this section.")
 
 class StudyPack(BaseModel):
-    title: str = Field(..., description="The main subject or overall title of the study guide.")
-    sections: List[Section] = Field(..., description="The sections that comprise the study guide.")
+    title: str = Field(..., description="The overall title of the study pack guide.")
+    sections: List[Section] = Field(..., description="List of topic sections in the study pack.")
 
 class JobResponse(BaseModel):
     job_id: str
     status: JobStatus
-    file_name: str
+    mode: ProductMode
+    file_name: Optional[str] = None
+    study_file_names: List[str] = Field(default_factory=list)
+    question_bank_name: Optional[str] = None
+    study_file_count: int = 0
     created_at: str
     completed_at: Optional[str] = None
     error_message: Optional[str] = None
     study_pack: Optional[StudyPack] = None
+    answer_pack: Optional[AnswerPack] = None
     pdf_url: Optional[str] = None
     
     # Extraction pipeline metadata
@@ -53,6 +113,7 @@ class UploadResponse(BaseModel):
     job_id: str
     message: str
     status: JobStatus
+    mode: ProductMode
 
 class HealthCheckResponse(BaseModel):
     status: str

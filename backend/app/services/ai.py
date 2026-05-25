@@ -1,9 +1,10 @@
 import json
 import time
+from typing import List
 from google import genai
 from google.genai import types
 from app.config import settings
-from app.models.schemas import StudyPack
+from app.models.schemas import AnswerPack, StudyPack
 from app.utils.logger import logger
 
 GEMINI_MAX_ATTEMPTS = 3
@@ -34,8 +35,7 @@ def _is_transient_gemini_error(exc: Exception) -> bool:
 
 def clean_study_notes(raw_text: str) -> dict:
     """
-    Sends raw extracted text to Gemini to clean up, simplify, and structure
-    into a student-friendly study pack JSON output while preserving asset placeholders.
+    Sends raw extracted text to Gemini to structure into a student-friendly StudyPack guide.
     
     Args:
         raw_text: The layout-sorted extracted text with inline image placeholders.
@@ -44,14 +44,17 @@ def clean_study_notes(raw_text: str) -> dict:
         A dictionary matching the StudyPack schema format.
     """
     if not settings.GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY is not configured in environment settings.")
+        logger.error("GEMINI_API_KEY is not configured in settings.")
         raise ValueError("Gemini API key is missing. Please configure GEMINI_API_KEY in your .env file.")
         
-    logger.info("Sending content to Gemini for study pack generation...")
+    logger.info("Sending content to Gemini for study pack guide generation...")
     
     prompt = f"""
 You are an expert academic tutor, examiner, and content compiler. 
 Your task is to convert raw extracted academic materials into a premium, clean, exam-ready study guide.
+
+=== STUDY MATERIALS ===
+{raw_text}
 
 INSTRUCTIONS FOR GENERATION:
 1. Organize the content into a cohesive, structured study guide.
@@ -68,38 +71,22 @@ INSTRUCTIONS FOR GENERATION:
 9. Create a 'memory_trick' (like a mnemonic, acronym, or memory peg) to help students easily recall lists or complex concepts.
 10. Draft a list of 'revision_cheatsheet' points—one-liners for quick revision right before entering the exam room.
 11. FORMATTING RULES (Safe Markdown):
-    - You are allowed and encouraged to use standard semantic markdown syntax in string fields to enhance readability and structure:
-      - Use **bold** to highlight key terms, rules, and definitions.
-      - Use *italics* for minor emphasis or citations.
-      - Use inline code backticks `like_this` for programming keywords, variables, or tech terms.
-      - Use inline headers (like ### Sub-topic) inside the simple_explanation or summary if needed to group details.
-      - Use Unicode math symbols for formulas and equations.
+    - You are allowed and encouraged to use standard semantic markdown syntax in string fields to enhance readability and structure.
     - Do NOT use raw HTML.
-    - Do NOT use markdown code blocks/fences (e.g. ```python) unless explicitly demonstrating a programming snippet.
-    - Ensure all markdown elements are well-formed and clean.
+    - Unicode math symbols, superscripts, subscripts, and greek letters (e.g. λ, theta, eigenvalues/eigenvectors symbols) should be preserved exactly as-is to maintain formula rendering quality.
 12. CRITICAL ASSET RULES:
-    - You must preserve all image/diagram asset placeholders from the raw text EXACTLY as they appear.
-    - Placeholders are in the format: {{{{IMAGE_ASSET:filename.png}}}}
-    - If you encounter a placeholder, decide exactly which section it belongs to based on the surrounding context.
-    - Extract the exact filename (e.g. 'abc123_img_1.png') and place it inside the 'embedded_assets' list for that section.
-    - DO NOT rename, omit, or invent placeholders. Under no circumstances should you hallucinate filenames.
-    - Only filenames found inside a {{{{IMAGE_ASSET:filename}}}} pattern in the raw text can be included in 'embedded_assets'.
-    - If no placeholders belong to a section, leave 'embedded_assets' as an empty list [].
+    - You must preserve all image/diagram asset placeholders from the raw text EXACTLY as they appear: {{{{IMAGE_ASSET:filename.png}}}}
+    - Decide exactly which section it belongs to based on context, and place the filename (e.g. 'abc123_img_1.png') inside 'embedded_assets' list.
 
-RAW MATERIAL TO PROCESS:
-{raw_text}
+Return a structured JSON output conforming to the StudyPack schema.
 """
 
     last_error = None
-
     for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
         try:
-            logger.info(f"Gemini study pack generation attempt {attempt}/{GEMINI_MAX_ATTEMPTS}...")
-
-            # Initialize Google GenAI client
+            logger.info(f"Gemini study guide generation attempt {attempt}/{GEMINI_MAX_ATTEMPTS}...")
             client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-            # Call Gemini model requesting structured JSON output conforming to StudyPack
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
                 contents=prompt,
@@ -114,14 +101,112 @@ RAW MATERIAL TO PROCESS:
             if not raw_response_text:
                 raise ValueError("Received an empty response from Gemini API.")
 
-            # Parse and validate response structure using Pydantic model
             study_pack = StudyPack.model_validate_json(raw_response_text)
-
-            logger.info(
-                f"Successfully compiled study guide pack: '{study_pack.title}' "
-                f"with {len(study_pack.sections)} sections."
-            )
+            logger.info(f"Successfully compiled study guide pack: '{study_pack.title}' with {len(study_pack.sections)} sections.")
             return study_pack.model_dump()
+
+        except Exception as e:
+            last_error = e
+            if _is_transient_gemini_error(e) and attempt < GEMINI_MAX_ATTEMPTS:
+                delay_seconds = GEMINI_RETRY_DELAYS_SECONDS[attempt - 1]
+                logger.warning(f"Transient error during study guide generation: {str(e)}. Retrying in {delay_seconds}s...")
+                time.sleep(delay_seconds)
+                continue
+
+            logger.error(f"Failed during study guide generation step: {str(e)}")
+            raise RuntimeError(f"Failed during study guide generation: {str(e)}") from e
+
+    raise RuntimeError(f"Failed during study guide generation after {GEMINI_MAX_ATTEMPTS} attempts: {str(last_error)}") from last_error
+
+
+def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> dict:
+    """
+    Sends study materials and parsed questions to Gemini to solve them,
+    returning a structured AnswerPack JSON.
+    
+    Args:
+        study_text: The extracted clean text of the study notes.
+        parsed_questions: A list of dicts, each with question_number, question_text, and likely_marks.
+        
+    Returns:
+        A dictionary matching the AnswerPack schema format.
+    """
+    if not settings.GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not configured in settings.")
+        raise ValueError("Gemini API key is missing. Please configure GEMINI_API_KEY in your .env file.")
+        
+    logger.info("Sending parsed questions and study notes to Gemini for solving...")
+    
+    # Format the parsed questions as a clean bulleted list for the AI
+    questions_list_str = ""
+    for idx, pq in enumerate(parsed_questions):
+        q_num = pq.get("question_number", f"Question {idx+1}")
+        q_text = pq.get("question_text", "")
+        q_marks = pq.get("likely_marks") or "Unknown"
+        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Text: {q_text}\n"
+
+    prompt = f"""
+You are an expert AI Solved Answer Pack Compiler.
+Your goal is to solve a specific list of parsed exam questions by referring to the provided study notes.
+
+=== STUDY MATERIALS ===
+{study_text}
+
+=== SPECIFIC TARGET QUESTIONS TO SOLVE ===
+{questions_list_str}
+
+CRITICAL SOLVING & DOMAIN KNOWLEDGE EXTENSION RULES:
+1. Priority 1 (Source Truth): Your primary source of truth is the "=== STUDY MATERIALS ===" text. Use it for all concepts, equations, names, and rules.
+2. Priority 2 (Partial Coverage): If the study materials cover the topic only partially, extend the answer with concise, standard academic domain knowledge to produce a high-scoring, complete exam answer.
+3. Priority 3 (No Coverage / Missing Notes): If the study materials do not cover the topic/question at all, do NOT output a useless dead-end answer (like "not found in notes"). Instead, generate a highly useful exam-ready answer using standard academic domain knowledge. When extending answers this way, you MUST append this exact notice to the end of the answer string:
+   "*(Note: Extended beyond uploaded notes.)*"
+4. Keep Unicode math symbols, subscripts, superscripts, and Greek letters (e.g. λ, theta, eigenvalues/eigenvectors symbols) intact to preserve formula rendering quality.
+5. Apply Marks-Aware Answering:
+   Look at the inferred marks/marks category. If not explicitly specified, infer a reasonable category ("2 Marks", "5 Marks", or "10 Marks").
+   - **2 Marks** (Short Answers): Provide a concise definition, direct formula, or a 1-2 sentence core explanation.
+   - **5 Marks** (Medium Answers): Provide a medium-depth structured explanation, using key bullet points or a short procedural description (around 1 paragraph + 3-5 key points).
+   - **10 Marks** (Long Answers / Essays): Provide a detailed and comprehensive response with structured headings, step-by-step logic, full math formulas, derivations, or system architectures.
+6. Map the output fields:
+   - `question_number`: The label of the question (exactly as provided in the target questions list).
+   - `question_text`: The full exact text of the question.
+   - `marks_category`: The final marks category: "2 Marks", "5 Marks", or "10 Marks".
+   - `answer`: The marks-aware comprehensive exam solution.
+   - `simple_explanation`: An intuitive explanation or plain-English analogy explaining the concept/formulas.
+   - `quick_revision`: A list of short summary bullet points (3-5 items) for quick review.
+   - `memory_trick`: A memory aid (acronym, mnemonic, etc.) to help remember this concept.
+   - `related_assets`: Look for any image placeholders (e.g. {{{{IMAGE_ASSET:filename.png}}}}) in the study materials that are directly relevant to this question. Put the exact filenames here.
+
+Return a structured JSON output conforming to the AnswerPack schema containing the list of SolvedQuestion.
+"""
+
+    last_error = None
+    for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
+        try:
+            logger.info(f"Gemini solving attempt {attempt}/{GEMINI_MAX_ATTEMPTS}...")
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=AnswerPack,
+                    temperature=0.2
+                )
+            )
+
+            raw_response_text = response.text
+            if not raw_response_text:
+                raise ValueError("Received an empty response from Gemini API solver.")
+
+            # Parse and validate response structure using Pydantic model
+            answer_pack = AnswerPack.model_validate_json(raw_response_text)
+            
+            logger.info(
+                f"Successfully compiled solved answer pack: '{answer_pack.title}' "
+                f"with {len(answer_pack.questions)} solved questions."
+            )
+            return answer_pack.model_dump()
 
         except Exception as e:
             last_error = e
@@ -134,19 +219,7 @@ RAW MATERIAL TO PROCESS:
                 time.sleep(delay_seconds)
                 continue
 
-            if _is_transient_gemini_error(e):
-                error_message = (
-                    f"Gemini AI processing failed after {GEMINI_MAX_ATTEMPTS} attempts "
-                    f"due to rate limit/quota or transient API errors: {str(e)}"
-                )
-            else:
-                error_message = f"Failed during Gemini cleanup and formatting step: {str(e)}"
+            logger.error(f"Failed during Gemini solving and formatting step: {str(e)}")
+            raise RuntimeError(f"Failed during Gemini solving and formatting: {str(e)}") from e
 
-            logger.error(error_message)
-            raise RuntimeError(error_message) from e
-
-    error_message = (
-        f"Gemini AI processing failed after {GEMINI_MAX_ATTEMPTS} attempts: {str(last_error)}"
-    )
-    logger.error(error_message)
-    raise RuntimeError(error_message) from last_error
+    raise RuntimeError(f"Gemini AI processing failed after {GEMINI_MAX_ATTEMPTS} attempts: {str(last_error)}") from last_error

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ answer_pack.title }}</title>
+    <style>
+        {% include 'styles.css' %}
+    </style>
+</head>
+<body>
+
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <div class="cover-badge">EXAM SLAYER V2 ANSWER PACK</div>
+        <h1 class="cover-title">{{ answer_pack.title }}</h1>
+        <div class="divider"></div>
+        <div class="cover-subtitle">SOLVED EXAM INTELLIGENCE REPORT</div>
+        <div style="margin-top: 50mm; font-size: 8.5pt; color: #94a3b8; font-family: sans-serif;">
+            Generated on 2026-05-24 • All Questions Solved from Source Materials
+        </div>
+    </div>
+
+    <!-- Content Sections -->
+    {% for q in answer_pack.questions %}
+    <div class="section-container">
+        <!-- Question Title Header -->
+        <h2 class="section-title">
+            {{ q.question_number }}
+            {% if q.likely_marks %}
+            <span style="font-size: 10pt; font-weight: normal; color: #4f46e5; margin-left: 10px; border: 1px solid #c7d2fe; background-color: #e0e7ff; padding: 2px 8px; border-radius: 4px; display: inline-block;">
+                {{ q.likely_marks }}
+            </span>
+            {% endif %}
+        </h2>
+        
+        <!-- Question Text Highlight -->
+        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #64748b; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px; font-weight: 600; color: #0f172a; font-size: 11pt; page-break-inside: avoid; break-inside: avoid;">
+            {{ q.question_text }}
+        </div>
+        
+        <!-- Ideal Answer Box -->
+        {% if q.ideal_answer_html and q.ideal_answer_html.strip() %}
+        <div class="key-points-container" style="border-left: 4px solid #6366f1; padding: 14px 18px;">
+            <div class="key-points-title" style="color: #4f46e5; font-size: 9.5pt;">Ideal Exam-Ready Answer</div>
+            <div style="color: #334155; line-height: 1.6; font-size: 10pt;">
+                {{ q.ideal_answer_html | safe }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Simple Explanation / Analogy Box -->
+        {% if q.simple_explanation_html and q.simple_explanation_html.strip() %}
+        <div class="analogy-box">
+            <div class="analogy-title">💡 Explanation & Background</div>
+            <div>{{ q.simple_explanation_html | safe }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Memory Trick -->
+        {% if q.memory_trick_html and q.memory_trick_html.strip() %}
+        <div class="memory-box">
+            <div class="memory-title">🔑 Memory Aid / Mnemonic</div>
+            <div class="memory-content">{{ q.memory_trick_html | safe }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Revision Points -->
+        {% if q.revision_points_html %}
+        <div class="cheatsheet-box">
+            <div class="cheatsheet-title">⚡ Fast Revision Bullets</div>
+            <ul class="cheatsheet-list">
+                {% for point in q.revision_points_html %}
+                <li class="cheatsheet-item">{{ point | safe }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Embedded Assets -->
+        {% if q.embedded_assets %}
+            {% for asset in q.embedded_assets %}
+            <div class="image-container">
+                <img class="embedded-image" src="{{ assets_dir_url }}/{{ asset }}" alt="Extracted Graphic">
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    {% endfor %}
+
+</body>
+</html>

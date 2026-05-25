@@ -21,6 +21,7 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
             
     logger.debug(f"Asset suffix map: {suffix_map}")
             
+    # 1. Sanitize sections (for STUDY_PACK mode)
     for section in study_pack.get("sections", []):
         corrected_assets = []
         raw_embedded = section.get("embedded_assets", [])
@@ -32,13 +33,9 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
                 continue
                 
             matched = False
-            # Find the position of 'img_'
             idx = asset.lower().find("img_")
             if idx != -1:
-                # Extract suffix starting from 'img_' or check if docx_img / pptx_img prefix is there
-                # e.g. for "jobid_docx_img_1.png", search for docx_img or pptx_img first
                 suffix = asset[idx:]
-                # Check if there is docx_ or pptx_ before it
                 before_idx = asset.lower().find("docx_img_")
                 if before_idx != -1:
                     suffix = asset[before_idx:]
@@ -53,7 +50,6 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
                     matched = True
                     logger.info(f"Corrected asset typo '{asset}' to '{suffix_map[suffix_clean]}'")
                 else:
-                    # Fuzzy match suffix
                     for skey, sval in suffix_map.items():
                         if suffix_clean in skey or skey in suffix_clean:
                             corrected_assets.append(sval)
@@ -62,12 +58,58 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
                             break
                             
             if not matched:
-                # If we have only one actual asset, map to it as fallback
                 if len(actual_assets) == 1:
                     corrected_assets.append(actual_assets[0])
                     logger.info(f"Fallback matched asset to single actual asset '{actual_assets[0]}'")
                 else:
-                    # Keep raw as fallback
                     corrected_assets.append(asset)
                     
         section["embedded_assets"] = corrected_assets
+
+    # 2. Sanitize questions (for ANSWER_PACK mode)
+    for question in study_pack.get("questions", []):
+        corrected_assets = []
+        raw_embedded = question.get("related_assets", [])
+        if not raw_embedded:
+            raw_embedded = question.get("embedded_assets", [])
+        if not isinstance(raw_embedded, list):
+            raw_embedded = []
+            
+        for asset in raw_embedded:
+            if not asset or not isinstance(asset, str):
+                continue
+                
+            matched = False
+            idx = asset.lower().find("img_")
+            if idx != -1:
+                suffix = asset[idx:]
+                before_idx = asset.lower().find("docx_img_")
+                if before_idx != -1:
+                    suffix = asset[before_idx:]
+                else:
+                    before_idx = asset.lower().find("pptx_img_")
+                    if before_idx != -1:
+                        suffix = asset[before_idx:]
+                        
+                suffix_clean = suffix.lower()
+                if suffix_clean in suffix_map:
+                    corrected_assets.append(suffix_map[suffix_clean])
+                    matched = True
+                    logger.info(f"Corrected asset typo '{asset}' to '{suffix_map[suffix_clean]}'")
+                else:
+                    for skey, sval in suffix_map.items():
+                        if suffix_clean in skey or skey in suffix_clean:
+                            corrected_assets.append(sval)
+                            matched = True
+                            logger.info(f"Fuzzy corrected asset typo '{asset}' to '{sval}'")
+                            break
+                            
+            if not matched:
+                if len(actual_assets) == 1:
+                    corrected_assets.append(actual_assets[0])
+                    logger.info(f"Fallback matched asset to single actual asset '{actual_assets[0]}'")
+                else:
+                    corrected_assets.append(asset)
+                    
+        question["related_assets"] = corrected_assets
+        question["embedded_assets"] = corrected_assets

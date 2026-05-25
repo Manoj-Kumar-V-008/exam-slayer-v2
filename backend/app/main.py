@@ -23,7 +23,8 @@ app.add_middleware(
 )
 
 def cleanup_old_files():
-    """Deletes generated files older than the configured retention window."""
+    """Deletes generated files and directories older than the configured retention window."""
+    import shutil
     retention_hours = settings.FILE_RETENTION_HOURS
     if retention_hours <= 0:
         logger.warning("Skipping file cleanup because FILE_RETENTION_HOURS is not positive.")
@@ -31,12 +32,13 @@ def cleanup_old_files():
 
     cutoff_timestamp = time.time() - (retention_hours * 3600)
     cleanup_dirs = [
-        settings.UPLOAD_DIR,
         settings.ASSETS_DIR,
         settings.OUTPUTS_DIR
     ]
 
     deleted_count = 0
+    
+    # 1. Clean assets and outputs files
     for folder in cleanup_dirs:
         if not folder.exists():
             continue
@@ -53,8 +55,24 @@ def cleanup_old_files():
             except Exception as e:
                 logger.error(f"Failed to clean up file {path}: {str(e)}")
 
+    # 2. Clean upload folders recursively
+    if settings.UPLOAD_DIR.exists():
+        for path in settings.UPLOAD_DIR.iterdir():
+            try:
+                if path.stat().st_mtime < cutoff_timestamp:
+                    if path.is_file():
+                        path.unlink()
+                        deleted_count += 1
+                        logger.info(f"Deleted expired upload file: {path}")
+                    elif path.is_dir():
+                        shutil.rmtree(path)
+                        deleted_count += 1
+                        logger.info(f"Deleted expired upload folder recursively: {path}")
+            except Exception as e:
+                logger.error(f"Failed to clean up upload path {path}: {str(e)}")
+
     logger.info(
-        f"Startup file cleanup complete. Deleted {deleted_count} file(s) older than "
+        f"Startup file cleanup complete. Deleted {deleted_count} file(s)/folder(s) older than "
         f"{retention_hours} hour(s)."
     )
 
