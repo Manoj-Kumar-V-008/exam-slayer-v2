@@ -96,7 +96,8 @@ async def startup_event():
         except Exception as e:
             logger.error(f"Error creating directory {folder}: {str(e)}")
 
-    cleanup_old_files()
+    import threading
+    threading.Thread(target=cleanup_old_files, daemon=True).start()
 
 # Health check route
 @app.post(f"{settings.API_V1_STR}/health", response_model=HealthCheckResponse, tags=["Health"])

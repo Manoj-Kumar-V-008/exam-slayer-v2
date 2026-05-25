@@ -9,8 +9,45 @@ from pathlib import Path
 from typing import Dict, List, Any
 from app.config import settings
 from app.utils.logger import logger
+import hashlib
+from io import BytesIO
+from PIL import Image
 
 _IMAGE_ASSET_PATTERN = re.compile(r"\{\{IMAGE_ASSET:[^}]+\}\}")
+
+def is_valid_academic_image(image_bytes: bytes, seen_hashes: set) -> bool:
+    """
+    Apply heuristics to filter out repeated logos, footers, Bullet icons,
+    watermarks, and other decorative junk while keeping conceptual academic diagrams.
+    """
+    if not image_bytes:
+        return False
+    # Filter out tiny decorative icons / line slices (under 5KB)
+    if len(image_bytes) < 5120:
+        return False
+        
+    h = hashlib.md5(image_bytes).hexdigest()
+    if seen_hashes is not None:
+        if h in seen_hashes:
+            return False
+        seen_hashes.add(h)
+        
+    try:
+        with Image.open(BytesIO(image_bytes)) as img:
+            width, height = img.size
+            # Filter out very thin horizontal/vertical dividers or bullet graphics
+            if width < 60 or height < 60:
+                return False
+            if min(width, height) > 0:
+                aspect_ratio = max(width, height) / min(width, height)
+                # Filter out extreme aspect ratio layout lines/borders
+                if aspect_ratio > 10.0:
+                    return False
+    except Exception:
+        # Fallback: if Pillow cannot parse, but size is reasonable, keep it
+        pass
+        
+    return True
 _OCR_TEXT_SEPARATOR = "\n\n--- OCR RECOVERED TEXT ---\n\n"
 
 
@@ -73,7 +110,7 @@ def _merge_ocr_text(result: Dict[str, Any], ocr_text: str, job_id: str) -> Dict[
     return result
 
 
-def extract_pdf_content(file_path: str, job_id: str) -> Dict[str, Any]:
+def extract_pdf_content(file_path: str, job_id: str, seen_hashes: set = None) -> Dict[str, Any]:
     """
     Extracts text page-by-page and retrieves embedded images from a PDF.
     Inserts inline placeholders like {{IMAGE_ASSET:filename}} in layout order.
@@ -107,11 +144,22 @@ def extract_pdf_content(file_path: str, job_id: str) -> Dict[str, Any]:
                     })
             
             # 2. Retrieve all images and their spatial coordinates
+            page_height = page.rect.height
             image_list = page.get_images(full=True)
             for img in image_list:
                 xref = img[0]
                 rects = page.get_image_rects(xref)
                 for rect in rects:
+                    if page_height > 0:
+                        is_header = rect.y1 <= page_height * 0.09
+                        is_footer = rect.y0 >= page_height * 0.91
+                        if is_header or is_footer:
+                            logger.info(
+                                f"Skipping header/footer image xref={xref} at y=({rect.y0:.1f}, {rect.y1:.1f}) "
+                                f"on page {page_num} (page height={page_height:.1f})"
+                            )
+                            continue
+                            
                     page_elements.append({
                         "type": "image",
                         "bbox": (rect.x0, rect.y0, rect.x1, rect.y1),
@@ -131,6 +179,10 @@ def extract_pdf_content(file_path: str, job_id: str) -> Dict[str, Any]:
                         base_image = doc.extract_image(xref)
                         if base_image:
                             image_bytes = base_image["image"]
+                            if not is_valid_academic_image(image_bytes, seen_hashes):
+                                logger.info(f"Skipped image xref={xref} on page {page_num} for job {job_id} due to academic heuristics.")
+                                continue
+                                
                             image_ext = base_image["ext"] or "png"
                             
                             if image_ext == "jpeg":
@@ -164,7 +216,7 @@ def extract_pdf_content(file_path: str, job_id: str) -> Dict[str, Any]:
     finally:
         doc.close()
 
-def extract_docx_content(file_path: str, job_id: str) -> Dict[str, Any]:
+def extract_docx_content(file_path: str, job_id: str, seen_hashes: set = None) -> Dict[str, Any]:
     """
     Extracts text paragraphs and embedded inline images from a Word (.docx) file.
     Inserts inline placeholders like {{IMAGE_ASSET:filename}} in document order.
@@ -196,6 +248,10 @@ def extract_docx_content(file_path: str, job_id: str) -> Dict[str, Any]:
                         try:
                             image_part = doc.part.related_parts[rId]
                             image_bytes = image_part.image.blob
+                            if not is_valid_academic_image(image_bytes, seen_hashes):
+                                logger.info(f"Skipped DOCX image rId={rId} for job {job_id} due to academic heuristics.")
+                                continue
+                                
                             content_type = image_part.content_type
                             
                             # Determine extension based on content type
@@ -241,7 +297,7 @@ def extract_docx_content(file_path: str, job_id: str) -> Dict[str, Any]:
         "assets": extracted_assets
     }
 
-def extract_pptx_content(file_path: str, job_id: str) -> Dict[str, Any]:
+def extract_pptx_content(file_path: str, job_id: str, seen_hashes: set = None) -> Dict[str, Any]:
     """
     Extracts text and embedded images from a PowerPoint (.pptx) file slide by slide,
     sorting slide shapes top-to-bottom and preserving slide separation.
@@ -278,6 +334,10 @@ def extract_pptx_content(file_path: str, job_id: str) -> Dict[str, Any]:
                 try:
                     image = shape.image
                     image_bytes = image.blob
+                    if not is_valid_academic_image(image_bytes, seen_hashes):
+                        logger.info(f"Skipped PPTX image for job {job_id} due to academic heuristics.")
+                        continue
+                        
                     image_ext = image.ext or "png"
                     if image_ext == "jpeg":
                         image_ext = "jpg"
@@ -304,18 +364,18 @@ def extract_pptx_content(file_path: str, job_id: str) -> Dict[str, Any]:
         "assets": extracted_assets
     }
 
-def extract_document(file_path: str, extension: str, job_id: str) -> Dict[str, Any]:
+def extract_document(file_path: str, extension: str, job_id: str, seen_hashes: set = None) -> Dict[str, Any]:
     """
     Dispatcher routing the document to the corresponding extractor service based on extension.
     """
     ext_clean = extension.lower().strip().replace(".", "")
     
     if ext_clean == "pdf":
-        result = extract_pdf_content(file_path, job_id)
+        result = extract_pdf_content(file_path, job_id, seen_hashes)
     elif ext_clean in ["docx", "doc"]:
-        result = extract_docx_content(file_path, job_id)
+        result = extract_docx_content(file_path, job_id, seen_hashes)
     elif ext_clean in ["pptx", "ppt"]:
-        result = extract_pptx_content(file_path, job_id)
+        result = extract_pptx_content(file_path, job_id, seen_hashes)
     else:
         logger.error(f"Unsupported document extension: {extension}")
         raise ValueError(f"Unsupported document extension: .{ext_clean}")

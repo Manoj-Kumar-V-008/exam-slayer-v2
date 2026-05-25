@@ -14,6 +14,19 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     DEBUG: bool = True
     
+    # Gemini Model and Routing Configs
+    QUESTION_PARSER_MODEL: str = "gemini-2.5-flash-lite"
+    STUDY_PACK_MODEL: str = "gemini-2.5-flash"
+    ANSWER_PACK_MODEL: str = "gemini-2.5-flash-lite"
+
+    QUESTION_PARSER_FALLBACK_MODEL: str = "gemini-2.5-flash"
+    STUDY_PACK_FALLBACK_MODEL: str = "gemini-2.5-flash-lite"
+    ANSWER_PACK_FALLBACK_MODEL: str = "gemini-2.5-flash"
+
+    # Batching and Context Limits
+    ANSWER_PACK_BATCH_SIZE: int = 5
+    MAX_ANSWER_PACK_CONTEXT_CHARS: int = 40000
+    
     # Directories (resolved absolute paths)
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
     ASSETS_DIR: Path = BASE_DIR / "assets"

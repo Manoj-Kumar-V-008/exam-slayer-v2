@@ -1,20 +1,20 @@
-/* Page setup for standard A4 printing */
+/* Page setup for standard A4 printing - compact margins */
 @page {
     size: A4;
-    margin: 20mm 15mm 20mm 15mm;
+    margin: 15mm 15mm 15mm 15mm;
     @bottom-right {
         content: "Page " counter(page) " of " counter(pages);
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Segoe UI Symbol", "Arial Unicode MS", "DejaVu Sans", "Cambria Math", sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
         font-size: 8pt;
         color: #94a3b8;
     }
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Segoe UI Symbol", "Arial Unicode MS", "DejaVu Sans", "Cambria Math", Helvetica, Arial, sans-serif;
-    color: #334155;
-    line-height: 1.6;
-    font-size: 10.5pt;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b; /* Slate 800 for high contrast */
+    line-height: 1.5;
+    font-size: 9.5pt; /* Slightly smaller but highly readable */
     margin: 0;
     padding: 0;
 }
@@ -27,350 +27,255 @@ h1, h2, h3, h4, h5, h6 {
     break-after: avoid;
 }
 
-/* Cover Title Page design */
+/* Cover Title Page design - Notion/Linear minimalist style */
 .cover-page {
     page-break-after: always;
-    text-align: center;
-    padding-top: 50mm;
+    text-align: left;
+    padding-top: 45mm;
     padding-bottom: 20mm;
+    max-width: 150mm;
 }
 
 .cover-badge {
     display: inline-block;
-    padding: 4px 12px;
-    background-color: #6366f1;
+    padding: 3px 10px;
+    background-color: #4f46e5;
     color: #ffffff;
-    border-radius: 9999px;
-    font-size: 9pt;
+    border-radius: 4px;
+    font-size: 8pt;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
 }
 
 .cover-title {
-    font-size: 30pt;
-    color: #1e1b4b;
-    margin-bottom: 5px;
+    font-size: 26pt;
+    color: #0f172a;
+    margin-bottom: 10px;
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1.25;
     page-break-after: avoid;
     break-after: avoid;
 }
 
 .divider {
-    height: 4px;
-    width: 100px;
-    background: linear-gradient(90deg, #6366f1 0%, #a855f7 100%);
-    margin: 25px auto;
+    height: 2px;
+    width: 60px;
+    background-color: #6366f1;
+    margin: 15px 0 20px 0;
     border-radius: 9999px;
 }
 
 .cover-subtitle {
-    font-size: 12pt;
+    font-size: 11pt;
     color: #4f46e5;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
-/* Sections details layout - Controlled page breaks */
+/* Sections details layout - Flowing layout (no page-break-before) */
 .section-container {
-    margin-bottom: 20mm;
-    page-break-before: always;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-/* Exclude the first section from creating an additional page break after cover */
-.section-container:first-of-type {
-    page-break-before: avoid;
+    margin-bottom: 8mm;
+    page-break-inside: auto;
+    break-inside: auto;
 }
 
 .section-title {
-    font-size: 17pt;
-    color: #1e1b4b;
-    border-left: 5px solid #6366f1;
-    padding-left: 12px;
-    margin-top: 10mm;
-    margin-bottom: 18px;
+    font-size: 12pt;
+    color: #0f172a;
+    border-left: 3px solid #6366f1;
+    padding-left: 8px;
+    margin-top: 6mm;
+    margin-bottom: 10px;
     font-weight: 700;
     page-break-after: avoid;
     break-after: avoid;
 }
 
-/* Summary Box */
-.summary-card {
+/* Question box - styled compact */
+.question-card {
     background-color: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
+    border-left: 3px solid #64748b;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 9.5pt;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
-.summary-title {
+/* Answer Box - styled card */
+.answer-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #6366f1;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.answer-title {
     font-weight: 700;
-    color: #475569;
-    margin-bottom: 6px;
-    font-size: 8.5pt;
+    color: #4f46e5;
+    margin-bottom: 5px;
+    font-size: 8pt;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
 }
 
 /* Simple Explanation Box (Intuitive Analogies) */
 .analogy-box {
     background-color: #f0fdf4;
-    border-left: 4px solid #16a34a;
+    border-left: 3px solid #16a34a;
     border-radius: 4px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    font-size: 9pt;
+    color: #166534;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
 .analogy-title {
-    font-weight: 800;
-    color: #15803d;
-    font-size: 9pt;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-/* Key learning points */
-.key-points-container {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-.key-points-title {
     font-weight: 700;
-    color: #475569;
-    margin-bottom: 8px;
-    font-size: 8.5pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-.key-points-list {
-    margin: 0;
-    padding-left: 18px;
-}
-
-.key-point-item {
-    margin-bottom: 6px;
-    color: #334155;
-}
-
-/* Premium Exam Tip Callout Box */
-.exam-tip-box {
-    background-color: #fffbeb;
-    border-left: 4px solid #d97706;
-    border-radius: 4px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-.exam-tip-header {
-    font-weight: 800;
-    color: #b45309;
-    font-size: 9pt;
+    color: #15803d;
+    font-size: 8pt;
     margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-.exam-tip-content {
-    color: #78350f;
-    font-style: italic;
-}
-
-/* Common Mistakes (Danger Card) */
-.mistakes-box {
-    background-color: #fff1f2;
-    border-left: 4px solid #e11d48;
-    border-radius: 4px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-.mistakes-title {
-    font-weight: 800;
-    color: #be123c;
-    font-size: 9pt;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-.mistakes-list {
-    margin: 0;
-    padding-left: 18px;
-}
-
-.mistake-item {
-    margin-bottom: 4px;
-    color: #9f1239;
 }
 
 /* Memory Trick (Sticky note style) */
 .memory-box {
     background-color: #faf5ff;
-    border: 1px dashed #c084fc;
-    border-left: 4px solid #9333ea;
-    border-radius: 6px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
+    border: 1px dashed #d8b4fe;
+    border-left: 3px solid #9333ea;
+    border-radius: 4px;
+    padding: 8px 12px;
+    margin-bottom: 10px;
+    font-size: 9pt;
+    color: #581c87;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
 .memory-title {
-    font-weight: 800;
+    font-weight: 700;
     color: #7e22ce;
-    font-size: 9pt;
-    margin-bottom: 6px;
+    font-size: 8pt;
+    margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-.memory-content {
-    color: #581c87;
-    font-weight: 500;
 }
 
 /* Revision Cheatsheet */
 .cheatsheet-box {
     background-color: #f0f9ff;
-    border-left: 4px solid #0284c7;
+    border-left: 3px solid #0284c7;
     border-radius: 4px;
-    padding: 12px 16px;
-    margin-bottom: 15px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
 .cheatsheet-title {
-    font-weight: 800;
+    font-weight: 700;
     color: #0369a1;
-    font-size: 9pt;
-    margin-bottom: 6px;
+    font-size: 8pt;
+    margin-bottom: 4px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
 }
 
 .cheatsheet-list {
     margin: 0;
-    padding-left: 18px;
+    padding-left: 15px;
 }
 
 .cheatsheet-item {
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     color: #0c4a6e;
-    font-size: 9.5pt;
-}
-
-/* Question Sections */
-.questions-container {
-    margin-top: 15px;
-    margin-bottom: 15px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-.questions-section-title {
-    font-weight: 700;
-    color: #334155;
-    margin-bottom: 8px;
     font-size: 9pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-.question-card {
-    background-color: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    position: relative;
-    page-break-inside: avoid;
-    break-inside: avoid;
-}
-
-.question-badge {
-    display: inline-block;
-    padding: 2px 6px;
-    font-size: 7.5pt;
-    font-weight: 700;
-    border-radius: 4px;
-    margin-bottom: 6px;
-    page-break-after: avoid;
-    break-after: avoid;
-}
-
-.badge-2marks {
-    background-color: #f1f5f9;
-    color: #475569;
-    border: 1px solid #cbd5e1;
-}
-
-.badge-5marks {
-    background-color: #e0e7ff;
-    color: #4338ca;
-    border: 1px solid #c7d2fe;
-}
-
-.badge-10marks {
-    background-color: #fae8ff;
-    color: #a21caf;
-    border: 1px solid #f5d0fe;
-}
-
-.question-text {
-    font-weight: 500;
-    color: #0f172a;
 }
 
 /* Embedded extracted image sizing and center alignment */
 .image-container {
     text-align: center;
-    margin: 20px 0;
+    margin: 15px 0;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
 .embedded-image {
     max-width: 100%;
-    max-height: 90mm;
+    max-height: 70mm;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+/* Table rendering styles - clean academic look */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 15px 0;
+    font-size: 8.5pt;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+th, td {
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+/* Code and Monospace block styling */
+pre {
+    background-color: #0f172a;
+    color: #e2e8f0;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 8pt;
+    overflow-x: auto;
+    margin: 8px 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 8.5pt;
+    background-color: #f1f5f9;
+    color: #0f172a;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: inherit;
 }

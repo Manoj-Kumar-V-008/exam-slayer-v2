@@ -18,8 +18,8 @@ def render_study_pack_html(study_pack: dict) -> str:
     """
     logger.info("Starting Jinja2 template rendering for study pack with comprehensive markdown parsing...")
     try:
-        # 1. Initialize MarkdownIt parser
-        md = MarkdownIt("commonmark")
+        # 1. Initialize MarkdownIt parser with table support enabled
+        md = MarkdownIt("commonmark").enable("table")
         
         # 2. Deep copy to avoid modifying original state dict
         processed_pack = copy.deepcopy(study_pack)
@@ -93,8 +93,8 @@ def render_answer_pack_html(answer_pack: dict) -> str:
     """
     logger.info("Starting Jinja2 template rendering for answer pack with comprehensive markdown parsing...")
     try:
-        # 1. Initialize MarkdownIt parser
-        md = MarkdownIt("commonmark")
+        # 1. Initialize MarkdownIt parser with table support enabled
+        md = MarkdownIt("commonmark").enable("table")
         
         # 2. Deep copy to avoid modifying original state dict
         processed_pack = copy.deepcopy(answer_pack)

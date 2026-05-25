@@ -27,22 +27,22 @@
         <h2 class="section-title">
             {{ q.question_number }}
             {% if q.marks_category %}
-            <span style="font-size: 10pt; font-weight: normal; color: #4f46e5; margin-left: 10px; border: 1px solid #c7d2fe; background-color: #e0e7ff; padding: 2px 8px; border-radius: 4px; display: inline-block;">
+            <span style="font-size: 8pt; font-weight: bold; color: #4f46e5; margin-left: 8px; border: 1px solid #c7d2fe; background-color: #e0e7ff; padding: 1px 6px; border-radius: 3px; display: inline-block; vertical-align: middle;">
                 {{ q.marks_category }}
             </span>
             {% endif %}
         </h2>
         
-        <!-- Question Text Highlight -->
-        <div style="background-color: #f8fafc; border: 1px solid #cbd5e1; border-left: 4px solid #64748b; border-radius: 6px; padding: 14px 18px; margin-bottom: 20px; font-weight: 600; color: #0f172a; font-size: 11pt; page-break-inside: avoid; break-inside: avoid;">
+        <!-- Question Text Card -->
+        <div class="question-card">
             {{ q.question_text }}
         </div>
         
         <!-- Answer Box -->
         {% if q.answer_html and q.answer_html.strip() %}
-        <div class="key-points-container" style="border-left: 4px solid #6366f1; padding: 14px 18px;">
-            <div class="key-points-title" style="color: #4f46e5; font-size: 9.5pt;">Ideal Exam-Ready Answer</div>
-            <div style="color: #334155; line-height: 1.6; font-size: 10pt;">
+        <div class="answer-card">
+            <div class="answer-title">Ideal Exam-Ready Answer</div>
+            <div style="color: #1e293b; line-height: 1.5; font-size: 9.5pt;">
                 {{ q.answer_html | safe }}
             </div>
         </div>
@@ -60,7 +60,7 @@
         {% if q.memory_trick_html and q.memory_trick_html.strip() %}
         <div class="memory-box">
             <div class="memory-title">🔑 Memory Aid / Mnemonic</div>
-            <div class="memory-content">{{ q.memory_trick_html | safe }}</div>
+            <div>{{ q.memory_trick_html | safe }}</div>
         </div>
         {% endif %}
         

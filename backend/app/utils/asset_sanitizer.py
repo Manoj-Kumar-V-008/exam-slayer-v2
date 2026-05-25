@@ -67,6 +67,9 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
         section["embedded_assets"] = corrected_assets
 
     # 2. Sanitize questions (for ANSWER_PACK mode)
+    seen_unique_assets = set()
+    MAX_ACADEMIC_IMAGES_PER_ANSWER_PACK = 10
+
     for question in study_pack.get("questions", []):
         corrected_assets = []
         raw_embedded = question.get("related_assets", [])
@@ -80,6 +83,7 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
                 continue
                 
             matched = False
+            resolved_filename = None
             idx = asset.lower().find("img_")
             if idx != -1:
                 suffix = asset[idx:]
@@ -93,23 +97,38 @@ def sanitize_embedded_assets(study_pack: dict, actual_job_id: str, actual_assets
                         
                 suffix_clean = suffix.lower()
                 if suffix_clean in suffix_map:
-                    corrected_assets.append(suffix_map[suffix_clean])
+                    resolved_filename = suffix_map[suffix_clean]
                     matched = True
-                    logger.info(f"Corrected asset typo '{asset}' to '{suffix_map[suffix_clean]}'")
+                    logger.info(f"Corrected asset typo '{asset}' to '{resolved_filename}'")
                 else:
                     for skey, sval in suffix_map.items():
                         if suffix_clean in skey or skey in suffix_clean:
-                            corrected_assets.append(sval)
+                            resolved_filename = sval
                             matched = True
                             logger.info(f"Fuzzy corrected asset typo '{asset}' to '{sval}'")
                             break
                             
             if not matched:
                 if len(actual_assets) == 1:
-                    corrected_assets.append(actual_assets[0])
+                    resolved_filename = actual_assets[0]
+                    matched = True
                     logger.info(f"Fallback matched asset to single actual asset '{actual_assets[0]}'")
                 else:
-                    corrected_assets.append(asset)
+                    resolved_filename = asset
+            
+            # Enforce strict diagram cap: only allow adding if we haven't exceeded 10 unique diagrams
+            # or if this unique diagram has already been added to the pack.
+            if resolved_filename:
+                if resolved_filename in seen_unique_assets:
+                    corrected_assets.append(resolved_filename)
+                elif len(seen_unique_assets) < MAX_ACADEMIC_IMAGES_PER_ANSWER_PACK:
+                    seen_unique_assets.add(resolved_filename)
+                    corrected_assets.append(resolved_filename)
+                else:
+                    logger.warning(
+                        f"Skipped diagram '{resolved_filename}' for question '{question.get('question_number')}' "
+                        f"due to strict cap: MAX_ACADEMIC_IMAGES_PER_ANSWER_PACK={MAX_ACADEMIC_IMAGES_PER_ANSWER_PACK}"
+                    )
                     
         question["related_assets"] = corrected_assets
         question["embedded_assets"] = corrected_assets

@@ -1,15 +1,16 @@
 import json
 import time
-from typing import List
+from typing import List, Optional, Any
 from pydantic import ValidationError
 from google import genai
 from google.genai import types
 from app.config import settings
 from app.models.schemas import AnswerPack, StudyPack
 from app.utils.logger import logger
+from app.utils.text_cleaner import compress_study_context_for_batch
 
-GEMINI_MAX_ATTEMPTS = 3
-GEMINI_RETRY_DELAYS_SECONDS = [10, 30]
+GEMINI_MAX_ATTEMPTS = 5
+GEMINI_RETRY_DELAYS_SECONDS = [15, 45, 90, 120, 150]
 
 
 def _is_transient_gemini_error(exc: Exception) -> bool:
@@ -40,6 +41,82 @@ def _is_transient_gemini_error(exc: Exception) -> bool:
     return any(marker in message for marker in retry_markers)
 
 
+def generate_content_with_fallback(
+    prompt: str,
+    response_schema: Any,
+    primary_model: str,
+    fallback_model: Optional[str] = None,
+    temperature: float = 0.2
+) -> Any:
+    """
+    Executes content generation using the primary model.
+    Falls back immediately to fallback_model on a quota error (429) or validation failure,
+    then retries with exponential backoff on subsequent failures.
+    """
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    current_model = primary_model
+    last_error = None
+    
+    for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
+        try:
+            logger.info(f"Generating content with model '{current_model}' (attempt {attempt}/{GEMINI_MAX_ATTEMPTS})...")
+            
+            response = client.models.generate_content(
+                model=current_model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=response_schema,
+                    temperature=temperature
+                )
+            )
+            
+            raw_response_text = response.text
+            if not raw_response_text:
+                raise ValueError("Received an empty response from Gemini API.")
+                
+            # Attempt to parse/validate the schema
+            validated_data = response_schema.model_validate_json(raw_response_text)
+            logger.info(f"Successfully generated and validated content with model '{current_model}'.")
+            return validated_data
+            
+        except Exception as e:
+            last_error = e
+            error_msg = str(e)
+            
+            is_quota_error = "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower() or "resource_exhausted" in error_msg.lower() or "too many requests" in error_msg.lower()
+            
+            is_validation_error = isinstance(e, ValidationError) or isinstance(e, ValueError) or "validation" in error_msg.lower() or "json" in error_msg.lower()
+            
+            logger.warning(
+                f"Error during generation (model='{current_model}', attempt={attempt}): {error_msg}. "
+                f"Type: {'Quota' if is_quota_error else 'Validation' if is_validation_error else 'Other'}."
+            )
+            
+            # Switch immediately to fallback model if any exception occurs, and fallback model is available and not already active
+            if fallback_model and current_model != fallback_model:
+                logger.warning(
+                    f"Error during generation (model='{current_model}'): {error_msg}. "
+                    f"Switching immediately to fallback model '{fallback_model}'."
+                )
+                current_model = fallback_model
+                # Retry immediately in next loop iteration without sleeping
+                continue
+                
+            # Otherwise apply retry backoff if transient/validation/quota and attempts remain
+            is_retryable = is_quota_error or is_validation_error or _is_transient_gemini_error(e)
+            if is_retryable and attempt < GEMINI_MAX_ATTEMPTS:
+                delay = GEMINI_RETRY_DELAYS_SECONDS[attempt - 1]
+                logger.info(f"Retrying with model '{current_model}' after a delay of {delay}s...")
+                time.sleep(delay)
+                continue
+            else:
+                logger.error(f"Permanent generation failure on attempt {attempt} using model '{current_model}': {error_msg}")
+                raise e
+                
+    raise RuntimeError(f"Generation failed after {GEMINI_MAX_ATTEMPTS} attempts. Last error: {str(last_error)}")
+
+
 def clean_study_notes(raw_text: str) -> dict:
     """
     Sends raw extracted text to Gemini to structure into a student-friendly StudyPack guide.
@@ -54,7 +131,7 @@ def clean_study_notes(raw_text: str) -> dict:
         logger.error("GEMINI_API_KEY is not configured in settings.")
         raise ValueError("Gemini API key is missing. Please configure GEMINI_API_KEY in your .env file.")
         
-    logger.info("Sending content to Gemini for study pack guide generation...")
+    logger.info("Preparing content for study pack guide generation...")
     
     prompt = f"""
 You are an expert academic tutor, examiner, and content compiler. 
@@ -87,124 +164,84 @@ INSTRUCTIONS FOR GENERATION:
 
 Return a structured JSON output conforming to the StudyPack schema.
 """
-
-    last_error = None
-    for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
-        try:
-            logger.info(f"Gemini study guide generation attempt {attempt}/{GEMINI_MAX_ATTEMPTS}...")
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=StudyPack,
-                    temperature=0.2
-                )
-            )
-
-            raw_response_text = response.text
-            if not raw_response_text:
-                raise ValueError("Received an empty response from Gemini API.")
-
-            try:
-                study_pack = StudyPack.model_validate_json(raw_response_text)
-                logger.info(f"Successfully compiled study guide pack: '{study_pack.title}' with {len(study_pack.sections)} sections.")
-                return study_pack.model_dump()
-            except Exception as val_err:
-                logger.error(
-                    f"Pydantic validation failed for StudyPack! "
-                    f"Response length: {len(raw_response_text)}. "
-                    f"Start of response: {raw_response_text[:1000]}... "
-                    f"End of response: ...{raw_response_text[-1000:] if len(raw_response_text) > 1000 else raw_response_text}"
-                )
-                raise val_err
-
-        except Exception as e:
-            last_error = e
-            is_retryable = (
-                _is_transient_gemini_error(e) or
-                isinstance(e, ValidationError) or
-                isinstance(e, ValueError) or
-                "validation" in str(e).lower() or
-                "json" in str(e).lower()
-            )
-            if is_retryable and attempt < GEMINI_MAX_ATTEMPTS:
-                delay_seconds = GEMINI_RETRY_DELAYS_SECONDS[attempt - 1]
-                logger.warning(f"Retryable error during study guide generation (attempt {attempt}): {str(e)}. Retrying in {delay_seconds}s...")
-                time.sleep(delay_seconds)
-                continue
-
-            logger.error(f"Failed during study guide generation step: {str(e)}")
-            raise RuntimeError(f"Failed during study guide generation: {str(e)}") from e
-
-    raise RuntimeError(f"Failed during study guide generation after {GEMINI_MAX_ATTEMPTS} attempts: {str(last_error)}") from last_error
+    try:
+        study_pack = generate_content_with_fallback(
+            prompt=prompt,
+            response_schema=StudyPack,
+            primary_model=settings.STUDY_PACK_MODEL,
+            fallback_model=settings.STUDY_PACK_FALLBACK_MODEL,
+            temperature=0.2
+        )
+        return study_pack.model_dump()
+    except Exception as e:
+        logger.error(f"Failed during study guide generation step: {str(e)}")
+        raise RuntimeError(f"Failed during study guide generation: {str(e)}") from e
 
 
-def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> dict:
+def _solve_question_batch(
+    study_text: str,
+    batch_questions: List[dict],
+    batch_idx: int,
+    total_batches: int,
+    primary_model: str,
+    fallback_model: Optional[str] = None
+) -> List[dict]:
     """
-    Sends study materials and parsed questions to Gemini in small batches to solve them,
-    returning a aggregated, structured AnswerPack JSON.
+    Solves a single batch of questions. Automatically handles context compression for the batch.
+    If the batch fails, it throws an error so the caller can split the batch dynamically.
     """
-    if not settings.GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY is not configured in settings.")
-        raise ValueError("Gemini API key is missing. Please configure GEMINI_API_KEY in your .env file.")
-        
-    if not parsed_questions:
-        logger.warning("Empty parsed questions list provided to solver.")
-        return {"title": "Solved Answer Pack", "questions": []}
-        
-    logger.info(f"Solving {len(parsed_questions)} questions in batches to control output size...")
+    # 1. Compress context for this specific batch of questions
+    compressed_context = compress_study_context_for_batch(
+        study_text=study_text,
+        batch_questions=batch_questions,
+        max_chars=settings.MAX_ANSWER_PACK_CONTEXT_CHARS
+    )
     
-    # We batch questions to prevent huge/runaway output and JSON validation issues
-    BATCH_SIZE = 2
-    batches = [parsed_questions[i:i + BATCH_SIZE] for i in range(0, len(parsed_questions), BATCH_SIZE)]
-    
-    all_solved_questions = []
-    final_title = "Solved Answer Pack"
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    
-    for batch_idx, batch in enumerate(batches):
-        logger.info(f"Processing question batch {batch_idx + 1}/{len(batches)} (size: {len(batch)})...")
-        
-        # Format the parsed questions in this batch as a clean bulleted list for the AI
-        questions_list_str = ""
-        for idx, pq in enumerate(batch):
-            q_num = pq.get("question_number", f"Question {batch_idx * BATCH_SIZE + idx + 1}")
-            q_text = pq.get("question_text", "")
-            q_marks = pq.get("likely_marks") or "Unknown"
-            questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Text: {q_text}\n"
+    # 2. Format question list
+    questions_list_str = ""
+    for idx, pq in enumerate(batch_questions):
+        q_num = pq.get("question_number", f"Question {idx + 1}")
+        q_text = pq.get("question_text", "")
+        q_marks = pq.get("likely_marks") or "Unknown"
+        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Text: {q_text}\n"
 
-        prompt = f"""
+    prompt = f"""
 You are a highly concise, expert AI Solved Answer Pack Compiler.
 Your goal is to solve a specific list of parsed exam questions by referring to the provided study notes.
+The target student wants to finish reading this pack quickly and feel confident. Every word must count.
 
 === STUDY MATERIALS ===
-{study_text}
+{compressed_context}
 
 === TARGET QUESTIONS TO SOLVE IN THIS BATCH ===
 {questions_list_str}
 
-CRITICAL RULES FOR BREVITY & VERBOSITY CONTROL:
-1. STRICT WORD LIMITS PER QUESTION:
-   For the 'answer' field of each question:
-   - If the marks category is "2 Marks", the answer MUST be between 80 and 150 words. Do NOT write more than 150 words.
-   - If the marks category is "5 Marks", the answer MUST be between 200 and 350 words. Do NOT write more than 350 words.
-   - If the marks category is "10 Marks", the answer MUST be between 400 and 700 words. Do NOT write more than 700 words.
-2. NO VERBOSITY BLOAT:
-   - Do NOT generate textbook explanations, historical background, or generic introductions.
-   - Do NOT repeat concepts. Write dense, high-scoring exam points and stop immediately.
-   - Do NOT expand answers endlessly. Keep every sentence functional and direct.
-3. SCHEMA FIELD BREVITY (CONCISE OUTPUT):
+CRITICAL RULES FOR BREVITY, EXAM FOCUS & VALUE DENSITY (COMPENSATE FOR LIGHTER MODELS):
+1. STRICT WORD LIMITS PER QUESTION (For the 'answer' field):
+   - If the marks category is "2 Marks", the answer MUST be extremely direct, concise and short: 30 to 70 words. State the definition or direct answer instantly. Do NOT add unnecessary background or introductory fluff.
+   - If the marks category is "5 Marks", the answer MUST be between 100 and 180 words. Keep it compact, high-value, and direct. Use bullets for core elements and a short explanation.
+   - If the marks category is "10 Marks", the answer MUST be between 200 and 380 words. Provide key concepts, structured comparison, or procedure details using concise bullet formatting. Detailed but revision-friendly; strictly avoid textbook essays or historical background.
+2. NO VERBOSITY OR ACADEMIC FLUFF:
+   - Do NOT write introductory filler like "In this section we will look at..." or "As described in the study notes...".
+   - Start immediately with the direct answer.
+   - Never repeat definitions or concepts within the same answer.
+   - Use examples ONLY if they are brief and genuinely help clarify the concept.
+3. STRUCTURED CONTENT RENDERING (CRITICAL):
+   - **SQL & Code Snippets:** Wrap all programming code, database schemas, and SQL queries in proper markdown code blocks (e.g., use ```sql ... ``` or ```c ... ```).
+   - **Tabular Comparisons & Structured Data:** If a question asks for comparisons (e.g., "DBMS vs File Systems" or "Logical vs Physical independence") or lists differences, advantages/disadvantages, you MUST render them inside a clean **markdown table** (e.g. `| Column 1 | Column 2 |` with `|---|---|` dividers). Do NOT use plain ASCII layouts.
+4. TOPPER-GRADE ACADEMIC QUALITY:
+   - Provide topper-grade academic answers. Use precise technical terminology.
+   - Bold critical terms when they are first defined.
+   - Make the `memory_trick` highly relevant, such as creative acronyms or mnemonics (e.g. "ACID = Atomicity, Consistency, Isolation, Durability").
+5. SCHEMA FIELD BREVITY (CONCISE OUTPUT):
    Conform to the AnswerPack schema and provide these fields for each question:
    - `question_number`: Exactly as given in target list.
    - `question_text`: Exactly as given in target list.
    - `marks_category`: "2 Marks", "5 Marks", or "10 Marks".
-   - `answer`: The exam-ready solution conforming strictly to the word limits above.
-   - `simple_explanation`: A very brief (max 60 words), intuitive plain-English analogy or summary.
-   - `quick_revision_points`: Exactly 3-5 short bullet points (max 10 words per bullet).
-   - `memory_trick`: A short (max 15 words) memory aid or mnemonic.
+   - `answer`: The exam-ready solution conforming strictly to the word limits and markdown rules above. Use bullet points or bold keys where appropriate.
+   - `simple_explanation`: A very brief (max 50 words) intuitive plain-English analogy or high-level summary.
+   - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing the key takeaway.
+   - `memory_trick`: A short (max 12 words) mnemonic or quick association trigger.
    - `related_assets`: Filename pointers to relevant images in the study materials if any.
 
 CRITICAL SOLVING & DOMAIN KNOWLEDGE EXTENSION RULES:
@@ -216,79 +253,80 @@ CRITICAL SOLVING & DOMAIN KNOWLEDGE EXTENSION RULES:
 
 Return a structured JSON output conforming to the AnswerPack schema containing the list of SolvedQuestion.
 """
+    answer_pack = generate_content_with_fallback(
+        prompt=prompt,
+        response_schema=AnswerPack,
+        primary_model=primary_model,
+        fallback_model=fallback_model,
+        temperature=0.2
+    )
+    return [q.model_dump() for q in answer_pack.questions]
 
-        batch_error = None
-        for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
-            try:
-                logger.info(f"Gemini solving attempt {attempt}/{GEMINI_MAX_ATTEMPTS} for batch {batch_idx + 1}...")
+
+def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> dict:
+    """
+    Sends study materials and parsed questions to Gemini in batches to solve them.
+    Features dynamic batch size reduction if solving fails due to schema validation or other errors.
+    """
+    if not settings.GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not configured in settings.")
+        raise ValueError("Gemini API key is missing. Please configure GEMINI_API_KEY in your .env file.")
+        
+    if not parsed_questions:
+        logger.warning("Empty parsed questions list provided to solver.")
+        return {"title": "Solved Answer Pack", "questions": []}
+        
+    logger.info(f"Solving {len(parsed_questions)} questions with dynamic batching and fallback protection...")
+    
+    # We initialize the queue of batches.
+    batch_size = settings.ANSWER_PACK_BATCH_SIZE
+    batches_queue = [parsed_questions[i:i + batch_size] for i in range(0, len(parsed_questions), batch_size)]
+    
+    all_solved_questions = []
+    final_title = "Solved Answer Pack"
+    
+    batch_counter = 0
+    while batches_queue:
+        current_batch = batches_queue.pop(0)
+        batch_counter += 1
+        total_batches_remaining = len(batches_queue) + 1
+        
+        logger.info(f"Processing question batch (size: {len(current_batch)}, remaining queue size: {len(batches_queue)})...")
+        
+        try:
+            solved_questions = _solve_question_batch(
+                study_text=study_text,
+                batch_questions=current_batch,
+                batch_idx=batch_counter,
+                total_batches=total_batches_remaining,
+                primary_model=settings.ANSWER_PACK_MODEL,
+                fallback_model=settings.ANSWER_PACK_FALLBACK_MODEL
+            )
+            all_solved_questions.extend(solved_questions)
+            
+            if batches_queue:
+                logger.info("Sleeping 5 seconds between batches...")
+                time.sleep(5)
                 
-                response = client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=AnswerPack,
-                        temperature=0.2
-                    )
+        except Exception as e:
+            logger.warning(f"Batch solving failed for batch of size {len(current_batch)}: {str(e)}")
+            
+            if len(current_batch) > 1:
+                mid = len(current_batch) // 2
+                batch_1 = current_batch[:mid]
+                batch_2 = current_batch[mid:]
+                logger.warning(
+                    f"Dynamically reducing batch size! Splitting batch of size {len(current_batch)} "
+                    f"into two sub-batches of size {len(batch_1)} and {len(batch_2)}."
                 )
-
-                raw_response_text = response.text
-                if not raw_response_text:
-                    raise ValueError("Received an empty response from Gemini API solver.")
-
-                try:
-                    # Parse and validate response structure using Pydantic model
-                    answer_pack = AnswerPack.model_validate_json(raw_response_text)
-                    
-                    logger.info(
-                        f"Successfully compiled solved answer pack batch {batch_idx + 1}: "
-                        f"'{answer_pack.title}' with {len(answer_pack.questions)} solved questions."
-                    )
-                    
-                    if batch_idx == 0:
-                        final_title = answer_pack.title
-                        
-                    for q in answer_pack.questions:
-                        all_solved_questions.append(q.model_dump())
-                        
-                    break  # Success, break attempt loop for this batch
-                    
-                except Exception as val_err:
-                    logger.error(
-                        f"Pydantic validation failed for AnswerPack batch {batch_idx + 1}! "
-                        f"Response length: {len(raw_response_text)}. "
-                        f"Start of response: {raw_response_text[:1000]}... "
-                        f"End of response: ...{raw_response_text[-1000:] if len(raw_response_text) > 1000 else raw_response_text}"
-                    )
-                    raise val_err
-
-            except Exception as e:
-                batch_error = e
-                is_retryable = (
-                    _is_transient_gemini_error(e) or
-                    isinstance(e, ValidationError) or
-                    isinstance(e, ValueError) or
-                    "validation" in str(e).lower() or
-                    "json" in str(e).lower()
-                )
-                if is_retryable and attempt < GEMINI_MAX_ATTEMPTS:
-                    delay_seconds = GEMINI_RETRY_DELAYS_SECONDS[attempt - 1]
-                    logger.warning(
-                        f"Gemini attempt {attempt}/{GEMINI_MAX_ATTEMPTS} for batch {batch_idx + 1} failed: {str(e)}. "
-                        f"Retrying in {delay_seconds} seconds..."
-                    )
-                    time.sleep(delay_seconds)
-                    continue
-
-                logger.error(f"Failed during Gemini solving for batch {batch_idx + 1}: {str(e)}")
-                raise RuntimeError(f"Failed during Gemini solving for batch {batch_idx + 1}: {str(e)}") from e
-        else:
-            raise RuntimeError(f"Failed to solve batch {batch_idx + 1} after {GEMINI_MAX_ATTEMPTS} attempts.") from batch_error
-
-    # Return the aggregated AnswerPack
-    final_pack = {
+                batches_queue.insert(0, batch_2)
+                batches_queue.insert(0, batch_1)
+                batch_counter -= 1
+            else:
+                logger.error(f"Single-question batch failed permanently. Cannot split further: {str(e)}")
+                raise e
+                
+    return {
         "title": final_title,
         "questions": all_solved_questions
     }
-    logger.info(f"Fully compiled answer pack with a total of {len(all_solved_questions)} solved questions.")
-    return final_pack

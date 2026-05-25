@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any, Tuple, Callable
 from app.config import settings
 from app.utils.logger import logger
 from app.services.extractor import extract_document, run_ocr_fallback, get_ocr_candidate_text_length
+from app.utils.text_cleaner import clean_extracted_text
 
 MAX_CHAR_LIMIT = 120000
 
@@ -72,6 +73,7 @@ def process_multi_source_job(
     study_text_parts: List[str] = []
     all_assets: List[str] = []
     ocr_used_any = False
+    seen_hashes = set()
     
     # Report active stage: extracting study materials
     if status_callback:
@@ -83,7 +85,7 @@ def process_multi_source_job(
         file_ext = name.split(".")[-1].lower() if "." in name else ""
         
         # Extract text & assets
-        result = extract_document(str(path), file_ext, job_id)
+        result = extract_document(str(path), file_ext, job_id, seen_hashes)
         
         # Run OCR fallback if needed
         result = run_ocr_fallback(result, str(path), file_ext, job_id)
@@ -95,7 +97,8 @@ def process_multi_source_job(
         
         # Format text with source headers
         source_header = f"=== SOURCE FILE: {name} ===\n"
-        study_text_parts.append(source_header + result.get("text", "").strip())
+        cleaned_text = clean_extracted_text(result.get("text", "").strip())
+        study_text_parts.append(source_header + cleaned_text)
         
     study_materials_text = "\n\n".join(study_text_parts)
     
@@ -109,13 +112,14 @@ def process_multi_source_job(
         logger.info(f"Processing question bank file: {question_bank_name} ({question_bank_path})")
         qb_ext = question_bank_name.split(".")[-1].lower() if "." in question_bank_name else ""
         
-        result = extract_document(str(question_bank_path), qb_ext, job_id)
+        result = extract_document(str(question_bank_path), qb_ext, job_id, seen_hashes)
         result = run_ocr_fallback(result, str(question_bank_path), qb_ext, job_id)
         
         if result.get("ocr_used", False):
             ocr_used_any = True
             
-        question_bank_text = f"=== QUESTION BANK SOURCE: {question_bank_name} ===\n" + result.get("text", "").strip()
+        cleaned_qb = clean_extracted_text(result.get("text", "").strip())
+        question_bank_text = f"=== QUESTION BANK SOURCE: {question_bank_name} ===\n" + cleaned_qb
 
     # 3. Apply AI Payload Protection Limits
     safe_study_text, safe_qb_text = enforce_payload_limits(study_materials_text, question_bank_text)
