@@ -1,17 +1,23 @@
-import React, { useState, useRef } from "react";
-import { ArrowLeft, FileUp, Sparkles, Shield, Info, CheckCircle2, AlertCircle, Loader2, X, FileText, UploadCloud, HelpCircle } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect } from "react";
+import { ArrowLeft, FileUp, Sparkles, Shield, Info, CheckCircle2, AlertCircle, Loader2, Trash2, FileText, UploadCloud, BookOpen, BrainCircuit } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { apiClient, UploadResponse } from "@/services/api";
+import { uploadFiles, ProductMode } from "@/services/api";
+import { Navbar } from "@/components/Navbar";
 
 export function UploadPage() {
   const navigate = useNavigate();
-  
+  const location = useLocation();
+
   // Refs
   const studyInputRef = useRef<HTMLInputElement>(null);
   const qbInputRef = useRef<HTMLInputElement>(null);
 
   // States
+  const [mode, setMode] = useState<ProductMode>(() => {
+    const passedMode = location.state?.initialMode;
+    return passedMode === "STUDY_PACK" || passedMode === "ANSWER_PACK" ? passedMode : "ANSWER_PACK";
+  });
   const [studyFiles, setStudyFiles] = useState<File[]>([]);
   const [questionBank, setQuestionBank] = useState<File | null>(null);
   const [isStudyDragging, setIsStudyDragging] = useState(false);
@@ -23,6 +29,23 @@ export function UploadPage() {
   // Constants
   const MAX_FILE_SIZE_MB = 40;
   const ALLOWED_EXTENSIONS = ["pdf", "docx", "pptx"];
+
+  // Read initialMode if changed in routing state
+  useEffect(() => {
+    if (location.state?.initialMode) {
+      const initMode = location.state.initialMode;
+      if (initMode === "STUDY_PACK" || initMode === "ANSWER_PACK") {
+        setMode(initMode);
+      }
+    }
+  }, [location.state]);
+
+  // Reset question bank if mode is switched to STUDY_PACK
+  useEffect(() => {
+    if (mode === "STUDY_PACK") {
+      setQuestionBank(null);
+    }
+  }, [mode]);
 
   // Helper: check extension
   const isValidExtension = (fileName: string) => {
@@ -78,16 +101,19 @@ export function UploadPage() {
       setError("Please select at least one Study Material file.");
       return;
     }
-    if (!questionBank) {
-      setError("College Question Bank / PYQ file is required.");
+    if (mode === "ANSWER_PACK" && !questionBank) {
+      setError("Question Bank / PYQ file is required for Answer Pack Mode.");
       return;
     }
 
     // Combined size check
-    let totalSize = questionBank.size;
+    let totalSize = 0;
     studyFiles.forEach((f) => {
       totalSize += f.size;
     });
+    if (questionBank) {
+      totalSize += questionBank.size;
+    }
 
     if (totalSize > MAX_FILE_SIZE_MB * 1024 * 1024) {
       setError(`Combined upload size exceeds the safe ${MAX_FILE_SIZE_MB}MB limit.`);
@@ -97,28 +123,22 @@ export function UploadPage() {
     setIsUploading(true);
     setUploadProgress(0);
 
-    // Build form data
-    const formData = new FormData();
-    studyFiles.forEach((file) => {
-      formData.append("study_files", file);
-    });
-    formData.append("question_bank", questionBank);
-
     try {
-      const response = await apiClient.post<UploadResponse>("/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        },
-        onUploadProgress: (progressEvent) => {
+      const response = await uploadFiles(
+        mode,
+        studyFiles,
+        questionBank,
+        (progressEvent) => {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
             setUploadProgress(percent);
           }
         }
-      });
+      );
 
-      if (response.data && response.data.job_id) {
-        navigate(`/processing/${response.data.job_id}`);
+      if (response && response.job_id) {
+        // Pass mode through navigation state to ProcessingPage immediately to prevent flicker
+        navigate(`/processing/${response.job_id}`, { state: { mode } });
       } else {
         throw new Error("Failed to receive Job ID from server.");
       }
@@ -131,67 +151,132 @@ export function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-indigo-500/30 selection:text-white bg-grid-pattern relative overflow-x-hidden pb-12">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary bg-grid-pattern relative overflow-x-hidden pb-16 transition-colors duration-300">
+      {/* Shared Navigation Header */}
+      <Navbar />
+
       {/* Ambient Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] bg-[radial-gradient(ellipse_60%_60%_at_50%_-20%,rgba(99,102,241,0.08),rgba(255,255,255,0))] pointer-events-none z-0" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] bg-[radial-gradient(ellipse_60%_60%_at_50%_-20%,rgba(99,102,241,0.08),transparent)] pointer-events-none z-0 dark:opacity-70 opacity-40" />
 
       <div className="container mx-auto px-4 py-8 relative z-10 max-w-5xl">
-        {/* Navigation & Header */}
-        <header className="mb-8">
-          <Button asChild variant="ghost" size="sm" className="gap-2 text-zinc-400 hover:text-zinc-200 mb-6" disabled={isUploading}>
+        <header className="mb-10">
+          <Button asChild variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground mb-6" disabled={isUploading}>
             <Link to="/">
               <ArrowLeft className="h-4 w-4" />
               Back to home
             </Link>
           </Button>
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-zinc-800 bg-zinc-900/60 text-[10px] font-semibold text-indigo-400 uppercase tracking-wider mb-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-border bg-card/60 text-[10px] font-semibold text-primary uppercase tracking-wider mb-2.5">
                 <Sparkles className="h-3 w-3" />
-                Solved Exam Intelligence
+                V2 Dual Mode Compiler
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-zinc-100">Prepare solved exam answers</h1>
-              <p className="mt-2 text-sm text-zinc-400 max-w-2xl">
-                Upload your notes and question bank to generate solved exam answers. Our system will extract the questions, map them to your materials, and build a downloadable solved guide.
+              <h1 className="text-3xl font-extrabold tracking-tight">Create Academic Pack</h1>
+              <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
+                Select your preparation mode, upload notes or textbook files, and let the AI generate customized study materials or solved exam answer packs.
               </p>
             </div>
             
-            <div className="flex items-center gap-3 bg-zinc-900/40 border border-zinc-800/40 p-2.5 rounded-lg text-xs self-start md:self-auto backdrop-blur-sm">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-white font-bold font-mono text-[10px]">1</span>
-              <span className="text-zinc-300 font-medium">Ingestion</span>
-              <div className="h-px w-6 bg-zinc-800" />
-              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-zinc-800 text-zinc-500 font-bold font-mono text-[10px]">2</span>
-              <span className="text-zinc-500">Generation</span>
+            <div className="flex items-center gap-3 bg-card/40 border border-border/60 p-2.5 rounded-lg text-xs self-start md:self-auto backdrop-blur-sm shadow-sm">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold font-mono text-[10px]">1</span>
+              <span className="text-foreground font-medium">Upload</span>
+              <div className="h-px w-6 bg-border" />
+              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-border text-muted-foreground font-bold font-mono text-[10px]">2</span>
+              <span className="text-muted-foreground">Compiler</span>
             </div>
           </div>
         </header>
 
         {/* Error Alert Display */}
         {error && (
-          <div className="mb-6 flex items-start gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-300 max-w-4xl mx-auto">
-            <AlertCircle className="h-4.5 w-4.5 text-red-400 shrink-0 mt-0.5" />
+          <div className="mb-8 flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/25 text-xs text-destructive max-w-4xl mx-auto shadow-sm">
+            <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-bold text-red-200 block">Ingestion Error</span>
+              <span className="font-bold block">Submission Blocked</span>
               <p className="leading-relaxed">{error}</p>
             </div>
           </div>
         )}
 
-        <form onSubmit={handleIngest} className="grid gap-6 md:grid-cols-5 max-w-5xl mx-auto">
+        {/* Mode Selector Cards */}
+        <section className="mb-10 max-w-4xl mx-auto">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 font-mono">1. Select Mode</h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* STUDY_PACK Card */}
+            <div
+              onClick={() => !isUploading && setMode("STUDY_PACK")}
+              className={`rounded-xl border p-5 cursor-pointer transition-all duration-300 relative flex items-start gap-4 ${
+                mode === "STUDY_PACK"
+                  ? "border-primary bg-primary/[0.03] ring-1 ring-primary shadow-md"
+                  : "border-border bg-card/30 hover:border-border/80 hover:bg-card/50"
+              } ${isUploading ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                mode === "STUDY_PACK"
+                  ? "bg-primary/10 border-primary/20 text-primary"
+                  : "bg-muted border-border text-muted-foreground"
+              }`}>
+                <BookOpen className="h-5 w-5" />
+              </div>
+              <div className="flex-1 text-left">
+                <span className="text-xs font-bold text-foreground block">Study Pack Mode</span>
+                <span className="text-[11px] text-muted-foreground mt-1 block leading-normal">
+                  Generates summaries, concepts, memory tricks, and predictive mark questions. Needs notes only.
+                </span>
+              </div>
+              {mode === "STUDY_PACK" && (
+                <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary" />
+              )}
+            </div>
+
+            {/* ANSWER_PACK Card */}
+            <div
+              onClick={() => !isUploading && setMode("ANSWER_PACK")}
+              className={`rounded-xl border p-5 cursor-pointer transition-all duration-300 relative flex items-start gap-4 ${
+                mode === "ANSWER_PACK"
+                  ? "border-primary bg-primary/[0.03] ring-1 ring-primary shadow-md"
+                  : "border-border bg-card/30 hover:border-border/80 hover:bg-card/50"
+              } ${isUploading ? "opacity-60 cursor-not-allowed" : ""}`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                mode === "ANSWER_PACK"
+                  ? "bg-primary/10 border-primary/20 text-primary"
+                  : "bg-muted border-border text-muted-foreground"
+              }`}>
+                <BrainCircuit className="h-5 w-5" />
+              </div>
+              <div className="flex-1 text-left">
+                <span className="text-xs font-bold text-foreground block">Answer Pack Mode</span>
+                <span className="text-[11px] text-muted-foreground mt-1 block leading-normal">
+                  Generates target-length answers solved directly from your question bank. Needs notes + question bank.
+                </span>
+              </div>
+              {mode === "ANSWER_PACK" && (
+                <div className="absolute top-3 right-3 h-2 w-2 rounded-full bg-primary" />
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Upload Form Zone */}
+        <form onSubmit={handleIngest} className={`grid gap-6 ${mode === "ANSWER_PACK" ? "md:grid-cols-5" : "max-w-3xl mx-auto"} transition-all duration-500`}>
           {/* Section A: Study Materials */}
-          <div className="md:col-span-3 rounded-xl border border-zinc-800/40 bg-zinc-900/50 backdrop-blur-md p-6 shadow-xl flex flex-col justify-between">
+          <div className={`${
+            mode === "ANSWER_PACK" ? "md:col-span-3" : "w-full"
+          } rounded-xl border border-border bg-card/45 backdrop-blur-md p-6 shadow-md flex flex-col justify-between`}>
             <div>
-              <div className="flex items-center justify-between mb-4 border-b border-zinc-800/40 pb-3">
-                <h3 className="font-bold text-zinc-200 text-sm flex items-center gap-2">
-                  <span className="flex h-5.5 w-5.5 items-center justify-center rounded bg-indigo-500/10 text-indigo-400 font-bold text-xs">A</span>
-                  Study Materials / Notes
+              <div className="flex items-center justify-between mb-4 border-b border-border/40 pb-3">
+                <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+                  <span className="flex h-5.5 w-5.5 items-center justify-center rounded bg-primary/10 text-primary font-bold text-xs">A</span>
+                  Study Materials / Syllabus Notes
                 </h3>
-                <span className="text-[10px] text-zinc-500 uppercase font-mono">1 to 5 files</span>
+                <span className="text-[10px] text-muted-foreground uppercase font-mono">1 to 5 files</span>
               </div>
               
-              <p className="text-xs text-zinc-400 mb-4 leading-relaxed">
-                Add textbook chapters, slides, lecture transcripts, or notes. This represents the knowledge base the AI will refer to for answering exam questions.
+              <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                Add lecture notes, slides (PPTX), course readings, or PDF chapters. The compiler uses these as the local fact sheet.
               </p>
 
               {/* Hidden file input */}
@@ -211,28 +296,39 @@ export function UploadPage() {
                 onDragLeave={() => setIsStudyDragging(false)}
                 onDrop={(e) => { e.preventDefault(); setIsStudyDragging(false); if (!isUploading && e.dataTransfer.files) addStudyFiles(e.dataTransfer.files); }}
                 onClick={() => !isUploading && studyInputRef.current?.click()}
-                className={`flex min-h-[180px] flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition-all duration-300 ease-in-out ${
+                className={`flex min-h-[170px] flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition-all duration-300 ease-in-out ${
                   isStudyDragging 
-                    ? "border-indigo-500 bg-indigo-500/5 scale-[1.01]" 
-                    : "border-zinc-800 bg-zinc-900/10 hover:bg-zinc-900/30 hover:border-indigo-500/30 cursor-pointer"
+                    ? "border-primary bg-primary/[0.04] scale-[1.01]" 
+                    : "border-border bg-muted/10 hover:bg-muted/30 hover:border-primary/40 cursor-pointer"
                 }`}
               >
-                <UploadCloud className="h-7 w-7 text-zinc-500 mb-2 group-hover:text-indigo-400 transition-colors" />
-                <span className="text-xs font-bold text-zinc-300">Drag notes here or browse</span>
-                <span className="text-[10px] text-zinc-500 mt-1">Supports PDF, DOCX, PPTX (Max 40MB total)</span>
+                <UploadCloud className="h-7 w-7 text-muted-foreground/60 mb-2 transition-colors" />
+                <span className="text-xs font-bold text-foreground">Drag study notes here or browse</span>
+                <span className="text-[10px] text-muted-foreground/60 mt-1">Supports PDF, DOCX, PPTX (Max 40MB total)</span>
               </div>
 
               {/* Study Materials List */}
               {studyFiles.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <span className="text-[10px] text-zinc-500 font-mono uppercase block">Selected Materials ({studyFiles.length}/5)</span>
-                  <div className="flex flex-wrap gap-2">
+                <div className="mt-5 space-y-2">
+                  <span className="text-[10px] text-muted-foreground font-mono uppercase block">Selected Materials ({studyFiles.length}/5)</span>
+                  <div className="flex flex-col gap-2">
                     {studyFiles.map((file, idx) => (
-                      <div key={idx} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800/80 text-xs text-zinc-300">
-                        <FileText className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
-                        <span className="truncate max-w-[150px] font-medium" title={file.name}>{file.name}</span>
-                        <button type="button" onClick={() => removeStudyFile(idx)} className="text-zinc-500 hover:text-red-400 transition-colors shrink-0" disabled={isUploading}>
-                          <X className="h-3.5 w-3.5" />
+                      <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-lg bg-background border border-border/80 text-xs text-foreground group shadow-sm">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <div className="truncate">
+                            <span className="font-medium block truncate" title={file.name}>{file.name}</span>
+                            <span className="text-[9px] text-muted-foreground font-mono">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                          </div>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => removeStudyFile(idx)} 
+                          className="text-muted-foreground hover:text-destructive transition-colors shrink-0 p-1 hover:bg-muted rounded-md" 
+                          disabled={isUploading}
+                          aria-label="Remove file"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     ))}
@@ -241,110 +337,147 @@ export function UploadPage() {
               )}
             </div>
 
-            <div className="mt-6 flex items-start gap-2.5 p-3 rounded-lg bg-zinc-950/40 border border-zinc-800/40 text-[11px] text-zinc-400">
-              <Info className="h-4 w-4 text-indigo-400 shrink-0 mt-0.5" />
-              <span>Ensure your materials cover the main topics in your question bank to get high-accuracy solutions.</span>
-            </div>
-          </div>
-
-          {/* Section B: Question Bank */}
-          <div className="md:col-span-2 rounded-xl border border-zinc-800/40 bg-zinc-900/50 backdrop-blur-md p-6 shadow-xl flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-zinc-800/40 pb-3">
-                <h3 className="font-bold text-zinc-200 text-sm flex items-center gap-2">
-                  <span className="flex h-5.5 w-5.5 items-center justify-center rounded bg-indigo-500/10 text-indigo-400 font-bold text-xs">B</span>
-                  Question Bank / PYQ
-                </h3>
-                <span className="text-[10px] text-zinc-500 uppercase font-mono">1 required file</span>
-              </div>
-              
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Upload your college question bank, past papers, or homework sheet. The AI will isolate and solve these specific questions.
-              </p>
-
-              {/* Hidden file input */}
-              <input 
-                type="file" 
-                ref={qbInputRef} 
-                className="hidden" 
-                onChange={(e) => e.target.files && handleQbSelect(e.target.files[0])}
-                accept=".pdf,.docx,.pptx"
-                disabled={isUploading}
-              />
-
-              {/* Single File Dropzone */}
-              {!questionBank ? (
-                <div 
-                  onDragOver={(e) => { e.preventDefault(); if (!isUploading) setIsQbDragging(true); }}
-                  onDragLeave={() => setIsQbDragging(false)}
-                  onDrop={(e) => { e.preventDefault(); setIsQbDragging(false); if (!isUploading && e.dataTransfer.files) handleQbSelect(e.dataTransfer.files[0]); }}
-                  onClick={() => !isUploading && qbInputRef.current?.click()}
-                  className={`flex min-h-[140px] flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition-all duration-300 ease-in-out ${
-                    isQbDragging 
-                      ? "border-indigo-500 bg-indigo-500/5 scale-[1.01]" 
-                      : "border-zinc-800 bg-zinc-900/10 hover:bg-zinc-900/30 hover:border-indigo-500/30 cursor-pointer"
-                  }`}
-                >
-                  <FileUp className="h-6 w-6 text-zinc-500 mb-2" />
-                  <span className="text-xs font-bold text-zinc-300">Choose exam paper</span>
-                  <span className="text-[10px] text-zinc-500 mt-1">PDF, DOCX, PPTX</span>
-                </div>
-              ) : (
-                /* Selected File Card */
-                <div className="p-4 rounded-xl bg-zinc-950 border border-zinc-800 relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/25 shrink-0">
-                      <FileText className="h-5 w-5" />
+            {mode === "STUDY_PACK" && (
+              <div className="mt-8 pt-6 border-t border-border/40">
+                {isUploading ? (
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between text-xs text-muted-foreground font-mono">
+                      <span>Uploading study files...</span>
+                      <span>{uploadProgress}%</span>
                     </div>
-                    <div>
-                      <span className="text-xs font-bold text-zinc-200 block truncate max-w-[140px]" title={questionBank.name}>
-                        {questionBank.name}
-                      </span>
-                      <span className="text-[10px] text-zinc-500 font-mono">
-                        {(questionBank.size / 1024 / 1024).toFixed(2)} MB
-                      </span>
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden border border-border/40">
+                      <div 
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300 ease-out" 
+                        style={{ width: `${uploadProgress}%` }}
+                      />
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => !isUploading && setQuestionBank(null)} disabled={isUploading} className="text-zinc-400 hover:text-red-400 gap-1 text-[11px]">
-                    <X className="h-3.5 w-3.5" />
-                    Remove
+                ) : (
+                  <Button 
+                    type="submit" 
+                    className="w-full shadow-md font-semibold gap-2"
+                    disabled={studyFiles.length === 0}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Create Study Pack
                   </Button>
-                </div>
-              )}
-            </div>
-
-            {/* Upload Action buttons */}
-            <div className="space-y-4 pt-6 mt-6 border-t border-zinc-800/40">
-              {isUploading ? (
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-zinc-400 font-mono">
-                    <span>Uploading solved pack items...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-zinc-900 border border-zinc-800/40 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300 ease-out" 
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Button 
-                  type="submit" 
-                  className="w-full shadow-lg shadow-indigo-600/10 gap-2"
-                  disabled={studyFiles.length === 0 || !questionBank}
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Solve Exam Pack
-                </Button>
-              )}
-              
-              <div className="flex items-center gap-1.5 justify-center text-[10px] text-zinc-500">
-                <Shield className="h-3 w-3" />
-                <span>Files are encrypted & secure</span>
+                )}
               </div>
+            )}
+
+            <div className="mt-6 flex items-start gap-2.5 p-3 rounded-lg bg-muted/40 border border-border/40 text-[11px] text-muted-foreground">
+              <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <span>Ensure your materials cover the main syllabus concepts to yield high-quality compilations.</span>
             </div>
           </div>
+
+          {/* Section B: Question Bank (Only visible for ANSWER_PACK) */}
+          {mode === "ANSWER_PACK" && (
+            <div className="md:col-span-2 rounded-xl border border-border bg-card/45 backdrop-blur-md p-6 shadow-md flex flex-col justify-between animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                  <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+                    <span className="flex h-5.5 w-5.5 items-center justify-center rounded bg-primary/10 text-primary font-bold text-xs">B</span>
+                    Question Bank / PYQ
+                  </h3>
+                  <span className="text-[10px] text-muted-foreground uppercase font-mono">1 required file</span>
+                </div>
+                
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Upload your previous year questions, assignment questions, or test paper. The solver parses and answers each question one by one.
+                </p>
+
+                {/* Hidden file input */}
+                <input 
+                  type="file" 
+                  ref={qbInputRef} 
+                  className="hidden" 
+                  onChange={(e) => e.target.files && handleQbSelect(e.target.files[0])}
+                  accept=".pdf,.docx,.pptx"
+                  disabled={isUploading}
+                />
+
+                {/* Single File Dropzone */}
+                {!questionBank ? (
+                  <div 
+                    onDragOver={(e) => { e.preventDefault(); if (!isUploading) setIsQbDragging(true); }}
+                    onDragLeave={() => setIsQbDragging(false)}
+                    onDrop={(e) => { e.preventDefault(); setIsQbDragging(false); if (!isUploading && e.dataTransfer.files) handleQbSelect(e.dataTransfer.files[0]); }}
+                    onClick={() => !isUploading && qbInputRef.current?.click()}
+                    className={`flex min-h-[130px] flex-col items-center justify-center rounded-xl border border-dashed p-6 text-center transition-all duration-300 ease-in-out ${
+                      isQbDragging 
+                        ? "border-primary bg-primary/[0.04] scale-[1.01]" 
+                        : "border-border bg-muted/10 hover:bg-muted/30 hover:border-primary/40 cursor-pointer"
+                    }`}
+                  >
+                    <FileUp className="h-6 w-6 text-muted-foreground/60 mb-2" />
+                    <span className="text-xs font-bold text-foreground">Choose question paper</span>
+                    <span className="text-[10px] text-muted-foreground/60 mt-1">PDF, DOCX, PPTX</span>
+                  </div>
+                ) : (
+                  /* Selected File Card */
+                  <div className="p-4 rounded-xl bg-background border border-border relative flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
+                        <FileText className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-foreground block truncate max-w-[130px]" title={questionBank.name}>
+                          {questionBank.name}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground font-mono block">
+                          {(questionBank.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => !isUploading && setQuestionBank(null)} 
+                      disabled={isUploading} 
+                      className="text-muted-foreground hover:text-destructive gap-1 text-[11px] h-8 px-2 hover:bg-muted"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Upload Action buttons */}
+              <div className="space-y-4 pt-6 mt-6 border-t border-border/40">
+                {isUploading ? (
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between text-xs text-muted-foreground font-mono">
+                      <span>Uploading solved pack items...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden border border-border/40">
+                      <div 
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-300 ease-out" 
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <Button 
+                    type="submit" 
+                    className="w-full font-semibold shadow-md gap-2"
+                    disabled={studyFiles.length === 0 || !questionBank}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Solve Exam Pack
+                  </Button>
+                )}
+                
+                <div className="flex items-center gap-1.5 justify-center text-[10px] text-muted-foreground font-mono">
+                  <Shield className="h-3 w-3" />
+                  <span>Files are processed securely</span>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       </div>
     </div>

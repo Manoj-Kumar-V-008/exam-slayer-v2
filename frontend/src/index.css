@@ -4,24 +4,38 @@
 
 @layer base {
   :root {
-    --background: 240 10% 3.9%; /* zinc-950 */
-    --foreground: 240 5% 96%;   /* zinc-100 */
-    --card: 240 10% 5.9%;       /* zinc-900 */
-    --card-foreground: 240 5% 96%;
-    --primary: 250 84% 54%;     /* indigo-600 */
+    /* Light mode variables */
+    --background: 0 0% 100%;       /* white */
+    --foreground: 240 10% 3.9%;    /* zinc-950 */
+    --card: 240 4.8% 95.9%;        /* zinc-100 */
+    --card-foreground: 240 10% 3.9%;
+    --primary: 250 84% 54%;        /* indigo-600 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%; /* zinc-800 */
+    --secondary: 240 5.9% 90%;     /* zinc-200 */
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%; /* zinc-500 */
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 250 84% 54%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Dark mode variables */
+    --background: 240 10% 3.9%;    /* zinc-950 */
+    --foreground: 240 5% 96%;      /* zinc-100 */
+    --card: 240 10% 5.9%;          /* zinc-900 */
+    --card-foreground: 240 5% 96%;
+    --primary: 250 84% 54%;        /* indigo-600 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;   /* zinc-800 */
     --secondary-foreground: 240 5% 96%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%; /* zinc-400 */
-    --accent: 250 84% 54%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 240 5% 96%;
-    --border: 240 3.7% 15.9% / 0.4; /* zinc-800/40 */
+    --border: 240 3.7% 15.9% / 0.4;
     --input: 240 3.7% 15.9%;
     --ring: 250 84% 54%;
-    --radius: 0.75rem;
   }
 
   * {
@@ -29,7 +43,7 @@
   }
 
   body {
-    @apply min-h-screen bg-background font-sans text-foreground antialiased selection:bg-indigo-500/30 selection:text-white;
+    @apply min-h-screen bg-background font-sans text-foreground antialiased selection:bg-indigo-500/30 selection:text-white transition-colors duration-300;
   }
 
   a {
@@ -39,8 +53,10 @@
 
 @layer utilities {
   .bg-grid-pattern {
-    background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+  .dark .bg-grid-pattern {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  }
 }
-

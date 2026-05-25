@@ -1,0 +1,52 @@
+{
+  "title": "AI Solved Answer Pack",
+  "questions": [
+    {
+      "question_number": "Question 1",
+      "question_text": "Define the eigenvalue equation.",
+      "marks_category": "2 Marks",
+      "answer": "The eigenvalue equation is defined as A * v = λ * v, where A is a square matrix, v is a non-zero eigenvector, and λ (lambda) is the corresponding eigenvalue. This equation signifies that when a linear transformation (represented by matrix A) is applied to an eigenvector v, the result is simply a scalar multiple (λ) of the original eigenvector, meaning the direction of the vector remains unchanged.",
+      "quick_revision": [
+        "A * v = λ * v",
+        "A: square matrix",
+        "v: eigenvector (direction unchanged)",
+        "λ: eigenvalue (scalar scaling factor)"
+      ],
+      "memory_trick": "Think 'AV = LV' (A times V equals Lambda times V) to remember the core equation.",
+      "related_assets": [],
+      "simple_explanation": "Imagine you have a special arrow (vector 'v') and you apply a transformation (matrix 'A') to it. If the arrow just gets longer or shorter, but still points in the exact same direction, then it's an eigenvector, and how much it stretched or shrunk is its eigenvalue ('λ')."
+    },
+    {
+      "question_number": "Question 2",
+      "question_text": "Describe gradient descent in the context of deep learning optimization.",
+      "marks_category": "10 Marks",
+      "answer": "Gradient Descent is a fundamental iterative optimization algorithm used in deep learning to minimize the loss function of a model. The goal is to find the set of model parameters (weights and biases) that result in the lowest possible error on the training data.\n\n**Core Concept:**\n1.  **Loss Function:** Deep learning models define a loss function (or cost function) that quantifies the error between the model's predictions and the actual target values. The objective is to minimize this function.\n2.  **Gradient:** The gradient of the loss function with respect to the model's parameters is a vector that points in the direction of the steepest increase of the function. In deep learning, this gradient is typically computed using backpropagation.\n3.  **Descent:** Gradient Descent works by iteratively adjusting the model parameters in the opposite direction of the gradient. This ensures that each step moves towards a lower value of the loss function.\n\n**Update Rule:**\nThe parameters (θ) are updated using the following rule:\nθ_new = θ_old - η * ∇J(θ_old)\nWhere:\n*   θ_new: The updated parameters.\n*   θ_old: The current parameters.\n*   η (eta): The learning rate, which governs the step size taken in the direction of the negative gradient. A crucial hyperparameter, as too large a learning rate can lead to overshooting the minimum, while too small a rate can make convergence very slow.\n*   ∇J(θ_old): The gradient of the loss function J with respect to the parameters θ at the current point.\n\n**Types of Gradient Descent:**\n*   **Batch Gradient Descent:** Computes the gradient using the entire training dataset. It provides a stable convergence but can be very slow and memory-intensive for large datasets.\n*   **Stochastic Gradient Descent (SGD):** Updates parameters after processing each individual training example. This introduces more noise but can be much faster and escape shallow local minima. The notes mention SGD as an optimization method.\n*   **Mini-batch Gradient Descent:** A compromise between Batch and Stochastic GD. It computes the gradient and updates parameters using a small random subset (mini-batch) of the training data. This offers a good balance between stability and computational efficiency, and is the most common variant in deep learning.\n\n**Challenges:**\nGradient Descent can face challenges such as getting stuck in local minima or saddle points, and issues with vanishing or exploding gradients, especially in deep networks. More advanced optimization methods like Adam and RMSprop (mentioned in notes) address some of these issues by adapting the learning rate for each parameter.\n\nIn summary, Gradient Descent is the backbone of training deep learning models, enabling them to learn by iteratively adjusting their internal parameters to minimize prediction errors. *(Note: Extended beyond uploaded notes.)*",
+      "quick_revision": [
+        "Iterative optimization to minimize loss function.",
+        "Updates parameters in opposite direction of gradient.",
+        "Update rule: θ_new = θ_old - η * ∇J(θ_old).",
+        "Learning rate (η) controls step size.",
+        "Types: Batch, Stochastic (SGD), Mini-batch GD."
+      ],
+      "memory_trick": "Think 'GD: Go Downhill' – you're trying to go down the 'hill' of the loss function to find the lowest point.",
+      "related_assets": [],
+      "simple_explanation": "Imagine you're blindfolded on a mountain (the loss function) and you want to find the lowest point (minimum error). You can't see the whole mountain, but you can feel the slope right where you are. Gradient Descent is like taking small steps downhill based on the steepest slope you feel. The 'learning rate' is how big your steps are. You keep taking steps until you can't go any lower."
+    },
+    {
+      "question_number": "Question 3",
+      "question_text": "Explain support vector machines (SVM).",
+      "marks_category": "5 Marks",
+      "answer": "Support Vector Machines (SVMs) are powerful supervised learning models used for classification and regression tasks, though primarily known for classification. The core idea behind SVMs is to find an optimal hyperplane that distinctly separates data points of different classes in a high-dimensional space.\n\n**Key Concepts:**\n*   **Hyperplane:** In a 2D space, this is a line; in 3D, it's a plane; and in higher dimensions, it's a hyperplane. It acts as the decision boundary that separates the data points belonging to different classes.\n*   **Support Vectors:** These are the data points that are closest to the hyperplane. They are the most difficult to classify and play a critical role in defining the position and orientation of the hyperplane. If these points were removed, the hyperplane's position might change.\n*   **Margin Maximization:** SVMs aim to find the hyperplane that has the largest possible distance (the 'margin') to the nearest training data point of any class. A larger margin generally leads to better generalization performance and robustness to new, unseen data.\n*   **Kernel Trick:** For data that is not linearly separable in its original feature space, SVMs use the 'kernel trick'. This involves implicitly mapping the input data into a higher-dimensional feature space where it might become linearly separable, without explicitly calculating the coordinates in that higher dimension. Common kernel functions include polynomial, radial basis function (RBF), and sigmoid.\n\nSVMs are effective in high-dimensional spaces and are memory efficient because they only use a subset of training points (the support vectors) in the decision function. *(Note: Extended beyond uploaded notes.)*",
+      "quick_revision": [
+        "Supervised learning model for classification.",
+        "Finds optimal hyperplane to separate classes.",
+        "Maximizes the 'margin' between hyperplane and support vectors.",
+        "Support vectors are closest data points to hyperplane.",
+        "Uses 'kernel trick' for non-linear data separation."
+      ],
+      "memory_trick": "Think 'SVM: Separate Via Margin' – it's all about finding the best separation line with the biggest gap.",
+      "related_assets": [],
+      "simple_explanation": "Imagine you have two different types of marbles (two classes) scattered on a table. An SVM tries to draw a line (hyperplane) between them so that the line is as far away as possible from the closest marbles of each type. The marbles closest to the line are the 'support vectors' because they 'support' where the line is drawn. If the marbles are mixed up and can't be separated by a straight line, the 'kernel trick' is like lifting the table and looking at the marbles from a different angle, where a line might now be able to separate them."
+    }
+  ]
+}

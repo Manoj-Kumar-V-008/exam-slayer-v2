@@ -111,32 +111,22 @@ def render_answer_pack_html(answer_pack: dict) -> str:
         # 3. Parse markdown fields to HTML with strict filtering
         for question in processed_pack.get("questions", []):
             # Parse block markdown fields
-            for field in ["ideal_answer", "answer", "simple_explanation", "memory_trick"]:
+            for field in ["answer", "simple_explanation", "memory_trick"]:
                 val = question.get(field)
                 if val and isinstance(val, str):
                     question[f"{field}_html"] = md.render(val).strip()
                 else:
                     question[f"{field}_html"] = ""
             
-            # Parse list fields (revision_points)
-            raw_items = question.get("revision_points", [])
+            # Parse list fields (quick_revision_points)
+            raw_items = question.get("quick_revision_points", [])
             if not raw_items or not isinstance(raw_items, list):
                 raw_items = []
             filtered_items = [
                 item for item in raw_items 
                 if item and isinstance(item, str) and item.strip()
             ]
-            question["revision_points_html"] = [parse_md_inline(item) for item in filtered_items]
-
-            # Parse list fields (quick_revision)
-            raw_qr = question.get("quick_revision", [])
-            if not raw_qr or not isinstance(raw_qr, list):
-                raw_qr = []
-            filtered_qr = [
-                item for item in raw_qr 
-                if item and isinstance(item, str) and item.strip()
-            ]
-            question["quick_revision_html"] = [parse_md_inline(item) for item in filtered_qr]
+            question["quick_revision_points_html"] = [parse_md_inline(item) for item in filtered_items]
             
         # 4. Load Jinja2 environment and render HTML
         env = Environment(loader=FileSystemLoader(str(settings.TEMPLATES_DIR)))

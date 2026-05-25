@@ -26,9 +26,9 @@
         <!-- Question Title Header -->
         <h2 class="section-title">
             {{ q.question_number }}
-            {% if q.likely_marks %}
+            {% if q.marks_category %}
             <span style="font-size: 10pt; font-weight: normal; color: #4f46e5; margin-left: 10px; border: 1px solid #c7d2fe; background-color: #e0e7ff; padding: 2px 8px; border-radius: 4px; display: inline-block;">
-                {{ q.likely_marks }}
+                {{ q.marks_category }}
             </span>
             {% endif %}
         </h2>
@@ -38,12 +38,12 @@
             {{ q.question_text }}
         </div>
         
-        <!-- Ideal Answer Box -->
-        {% if q.ideal_answer_html and q.ideal_answer_html.strip() %}
+        <!-- Answer Box -->
+        {% if q.answer_html and q.answer_html.strip() %}
         <div class="key-points-container" style="border-left: 4px solid #6366f1; padding: 14px 18px;">
             <div class="key-points-title" style="color: #4f46e5; font-size: 9.5pt;">Ideal Exam-Ready Answer</div>
             <div style="color: #334155; line-height: 1.6; font-size: 10pt;">
-                {{ q.ideal_answer_html | safe }}
+                {{ q.answer_html | safe }}
             </div>
         </div>
         {% endif %}
@@ -65,11 +65,11 @@
         {% endif %}
         
         <!-- Revision Points -->
-        {% if q.revision_points_html %}
+        {% if q.quick_revision_points_html %}
         <div class="cheatsheet-box">
             <div class="cheatsheet-title">⚡ Fast Revision Bullets</div>
             <ul class="cheatsheet-list">
-                {% for point in q.revision_points_html %}
+                {% for point in q.quick_revision_points_html %}
                 <li class="cheatsheet-item">{{ point | safe }}</li>
                 {% endfor %}
             </ul>
@@ -77,8 +77,8 @@
         {% endif %}
         
         <!-- Embedded Assets -->
-        {% if q.embedded_assets %}
-            {% for asset in q.embedded_assets %}
+        {% if q.related_assets %}
+            {% for asset in q.related_assets %}
             <div class="image-container">
                 <img class="embedded-image" src="{{ assets_dir_url }}/{{ asset }}" alt="Extracted Graphic">
             </div>

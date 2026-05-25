@@ -152,7 +152,7 @@ async def upload_file(
     background_tasks: BackgroundTasks, 
     mode: ProductMode = Form(..., description="The generation mode: STUDY_PACK or ANSWER_PACK"),
     study_files: List[UploadFile] = File(...),
-    question_bank: Optional[UploadFile] = File(None)
+    question_bank: Optional[UploadFile] = None
 ):
     # 1. Validation checks
     if not (1 <= len(study_files) <= 5):

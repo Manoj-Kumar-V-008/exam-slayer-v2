@@ -11,6 +11,14 @@ def setup_logger(name: str = "exam_slayer") -> logging.Logger:
         
     logger.setLevel(logging.INFO)
     
+    # Reconfigure stdout/stderr to UTF-8 to prevent UnicodeEncodeError on Windows
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
     # Create console handler with format
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)

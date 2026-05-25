@@ -20,49 +20,12 @@ class ProductMode(str, Enum):
 class SolvedQuestion(BaseModel):
     question_number: str = Field(..., description="The numbering or label of the question (e.g. 'Question 1', 'Question 2(a)').")
     question_text: str = Field(..., description="The full wording of the question extracted from the question bank.")
-    
-    # New suggested fields
     marks_category: Optional[str] = Field(None, description="The estimated or explicit marks category (e.g. '2 Marks', '5 Marks', '10 Marks').")
     answer: str = Field("", description="The comprehensive, exam-ready answer, tailored based on the provided study notes.")
-    quick_revision: List[str] = Field(default_factory=list, description="Key summary points/bullets for quick revision of this specific question.")
+    simple_explanation: str = Field(..., description="A simple background explanation or breakdown of the answer for intuitive learning.")
+    quick_revision_points: List[str] = Field(default_factory=list, description="Key summary points/bullets for quick revision of this specific question.")
     memory_trick: Optional[str] = Field(None, description="A memory aid (mnemonic, acronym, etc.) to help remember this answer if relevant.")
     related_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
-    
-    # Legacy compatibility fields (for frontend)
-    likely_marks: Optional[str] = Field(None, description="The estimated or explicit marks category (e.g. '2 Marks', '5 Marks', '10 Marks').")
-    ideal_answer: str = Field("", description="The comprehensive, exam-ready answer, tailored based on the provided study notes.")
-    revision_points: List[str] = Field(default_factory=list, description="Key summary points/bullets for quick revision of this specific question.")
-    embedded_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
-    
-    simple_explanation: str = Field(..., description="A simple background explanation or breakdown of the answer for intuitive learning.")
-
-    @model_validator(mode='after')
-    def sync_compatibility_fields(self) -> 'SolvedQuestion':
-        # Sync answer -> ideal_answer
-        if self.answer and not self.ideal_answer:
-            self.ideal_answer = self.answer
-        elif self.ideal_answer and not self.answer:
-            self.answer = self.ideal_answer
-
-        # Sync marks_category -> likely_marks
-        if self.marks_category and not self.likely_marks:
-            self.likely_marks = self.marks_category
-        elif self.likely_marks and not self.marks_category:
-            self.marks_category = self.likely_marks
-
-        # Sync quick_revision -> revision_points
-        if self.quick_revision and not self.revision_points:
-            self.revision_points = self.quick_revision
-        elif self.revision_points and not self.quick_revision:
-            self.quick_revision = self.revision_points
-
-        # Sync related_assets -> embedded_assets
-        if self.related_assets and not self.embedded_assets:
-            self.embedded_assets = self.related_assets
-        elif self.embedded_assets and not self.related_assets:
-            self.related_assets = self.embedded_assets
-
-        return self
 
 class AnswerPack(BaseModel):
     title: str = Field(..., description="The main subject or title of the answer pack.")

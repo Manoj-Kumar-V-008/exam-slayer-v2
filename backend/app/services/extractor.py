@@ -219,6 +219,20 @@ def extract_docx_content(file_path: str, job_id: str) -> Dict[str, Any]:
                 
         if para_text.strip():
             extracted_text_parts.append(para_text)
+
+    # Extract text from tables to handle question banks or materials structured in grids
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = []
+            seen_cells = set()
+            for cell in row.cells:
+                if cell not in seen_cells:
+                    seen_cells.add(cell)
+                    cell_text = cell.text.strip()
+                    if cell_text:
+                        row_text.append(cell_text)
+            if row_text:
+                extracted_text_parts.append(" | ".join(row_text))
             
     full_text = "\n\n".join(extracted_text_parts)
     logger.info(f"Successfully processed DOCX job_id={job_id}. Extracted {len(extracted_assets)} images.")

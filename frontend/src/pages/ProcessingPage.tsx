@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, AlertCircle, Sparkles, ArrowLeft, RefreshCw } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { getJobStatus, JobResponse } from "@/services/api";
+import { getJobStatus, JobResponse, ProductMode } from "@/services/api";
+import { Navbar } from "@/components/Navbar";
 
-const PIPELINE_STEPS = [
+interface Step {
+  id: string;
+  label: string;
+}
+
+const STUDY_PACK_STEPS: Step[] = [
+  { id: "uploaded", label: "Files uploaded successfully" },
+  { id: "extracting", label: "Processing study materials" },
+  { id: "ai_processing", label: "Structuring core concepts & summaries" },
+  { id: "pdf_generating", label: "Building study pack PDF" }
+];
+
+const ANSWER_PACK_STEPS: Step[] = [
   { id: "uploaded", label: "Files uploaded successfully" },
   { id: "extracting", label: "Processing study materials" },
   { id: "ocr_processing", label: "Reading question bank" },
@@ -12,11 +25,19 @@ const PIPELINE_STEPS = [
   { id: "pdf_generating", label: "Building answer pack PDF" }
 ];
 
-const STATUS_ORDER = ["uploaded", "extracting", "ocr_processing", "ai_processing", "pdf_generating"];
+const STUDY_PACK_STATUS_ORDER = ["uploaded", "extracting", "ai_processing", "pdf_generating"];
+const ANSWER_PACK_STATUS_ORDER = ["uploaded", "extracting", "ocr_processing", "ai_processing", "pdf_generating"];
 
 export function ProcessingPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Read mode from location state immediately to prevent flicker, default to ANSWER_PACK
+  const [mode, setMode] = useState<ProductMode>(() => {
+    const stateMode = location.state?.mode;
+    return stateMode === "STUDY_PACK" || stateMode === "ANSWER_PACK" ? stateMode : "ANSWER_PACK";
+  });
 
   // States
   const [jobData, setJobData] = useState<JobResponse | null>(null);
@@ -25,6 +46,10 @@ export function ProcessingPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
   const [showTechDetails, setShowTechDetails] = useState(false);
+
+  // Determine current steps and status order based on detected mode
+  const currentSteps = mode === "STUDY_PACK" ? STUDY_PACK_STEPS : ANSWER_PACK_STEPS;
+  const statusOrder = mode === "STUDY_PACK" ? STUDY_PACK_STATUS_ORDER : ANSWER_PACK_STATUS_ORDER;
 
   // Helper: Detect rate-limit / quota backend errors
   const isQuotaError = (errMsg: string | null): boolean => {
@@ -61,10 +86,16 @@ export function ProcessingPage() {
         setIsLoadingStatus(false);
         setJobData(data);
         setStatus(data.status);
+        
+        // Update mode if backend lists it differently
+        if (data.mode && data.mode !== mode) {
+          setMode(data.mode);
+        }
 
         if (data.status !== "failed") {
           // Track the last valid status prior to a potential failure
-          if (STATUS_ORDER.includes(data.status)) {
+          const order = data.mode === "STUDY_PACK" ? STUDY_PACK_STATUS_ORDER : ANSWER_PACK_STATUS_ORDER;
+          if (order.includes(data.status)) {
             setLastActiveStatus(data.status);
           }
         }
@@ -99,12 +130,12 @@ export function ProcessingPage() {
         clearTimeout(timeoutId);
       }
     };
-  }, [jobId, navigate]);
+  }, [jobId, navigate, mode]);
 
   // Helper: Determine state of each UI step
   const getStepState = (stepId: string, index: number) => {
     if (status === "failed") {
-      const failedIndex = STATUS_ORDER.indexOf(lastActiveStatus);
+      const failedIndex = statusOrder.indexOf(lastActiveStatus);
       if (index < failedIndex) return "completed";
       if (index === failedIndex) return "failed";
       return "pending";
@@ -114,158 +145,164 @@ export function ProcessingPage() {
       return "completed";
     }
 
-    const currentIndex = STATUS_ORDER.indexOf(status);
+    const currentIndex = statusOrder.indexOf(status);
     if (index < currentIndex) return "completed";
     if (index === currentIndex) return "running";
     return "pending";
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 selection:bg-indigo-500/30 selection:text-white bg-grid-pattern relative overflow-x-hidden flex flex-col justify-center py-12">
-      {/* Soft Radial Ambient Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] bg-[radial-gradient(ellipse_60%_60%_at_50%_-20%,rgba(99,102,241,0.08),rgba(255,255,255,0))] pointer-events-none z-0" />
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/20 selection:text-primary bg-grid-pattern relative overflow-x-hidden flex flex-col transition-colors duration-300">
+      {/* Shared Navigation Header */}
+      <Navbar />
 
-      <div className="container mx-auto px-4 relative z-10 flex flex-col items-center justify-center">
-        {/* Loading status wrapper */}
-        {isLoadingStatus && !error ? (
-          <div className="text-center py-12">
-            <Loader2 className="mx-auto h-10 w-10 animate-spin text-indigo-500 mb-4" />
-            <p className="text-sm text-zinc-400 font-medium">Connecting to status board...</p>
-          </div>
-        ) : error ? (
-          /* Error State Card */
-          <section className="w-full max-w-xl rounded-xl border border-red-500/20 bg-zinc-900/50 backdrop-blur-md p-8 text-center shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-1 bg-red-500/50" />
-            
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-500/10 border border-red-500/20 text-red-500 mb-6">
-              <AlertCircle className="h-6 w-6" />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col justify-center py-12 relative z-10">
+        {/* Soft Radial Ambient Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[400px] bg-[radial-gradient(ellipse_60%_60%_at_50%_-20%,rgba(99,102,241,0.08),transparent)] pointer-events-none z-0 dark:opacity-70 opacity-40" />
+
+        <div className="container mx-auto px-4 flex flex-col items-center justify-center">
+          {/* Loading status wrapper */}
+          {isLoadingStatus && !error ? (
+            <div className="text-center py-12 bg-card/30 border border-border p-8 rounded-xl backdrop-blur-sm shadow-sm max-w-md w-full">
+              <Loader2 className="mx-auto h-9 w-9 animate-spin text-primary mb-4" />
+              <p className="text-sm text-muted-foreground font-medium">Connecting to status board...</p>
             </div>
-
-            <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 border border-red-500/25 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Compilation Failed
-            </span>
-            
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-zinc-100">
-              Could not generate study pack
-            </h1>
-            
-             <p className="mt-2 text-sm text-zinc-400 px-4">
-              {getDisplayErrorMessage()}
-            </p>
-
-            {/* Technical details collapse */}
-            <div className="mt-6 text-left max-w-md mx-auto">
-              <button 
-                onClick={() => setShowTechDetails(!showTechDetails)}
-                className="text-[11px] text-zinc-500 hover:text-zinc-300 cursor-pointer select-none font-medium flex items-center gap-1.5 transition-colors focus:outline-none"
-              >
-                <span className={`inline-block transition-transform duration-200 ${showTechDetails ? "rotate-90" : ""}`}>
-                  ▶
-                </span>
-                {showTechDetails ? "Hide technical details" : "Show technical details"}
-              </button>
-              {showTechDetails && (
-                <div className="mt-2.5 p-3.5 rounded-lg bg-red-950/20 border border-red-950/40 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <span className="text-[10px] text-red-400/80 font-mono block mb-1">Raw Exception Dump</span>
-                  <p className="text-xs text-red-300 font-mono leading-relaxed break-words">
-                    {error}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <p className="mt-4 text-xs text-zinc-500">
-              Job ID: <span className="font-mono">{jobId}</span>
-            </p>
-
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild className="gap-2">
-                <Link to="/upload">
-                  <RefreshCw className="h-4 w-4" />
-                  Retry Upload
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="gap-2">
-                <Link to="/upload">
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Upload
-                </Link>
-              </Button>
-            </div>
-          </section>
-        ) : (
-          /* Processing Flow Card */
-          <section className="w-full max-w-xl rounded-xl border border-zinc-800/40 bg-zinc-900/50 backdrop-blur-md p-8 shadow-xl relative">
-            <div className="flex items-center justify-between border-b border-zinc-800/40 pb-4 mb-6">
-              <div>
-                <span className="text-[10px] font-semibold text-indigo-400 bg-indigo-500/10 border border-indigo-500/25 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 w-max">
-                  <Sparkles className="h-3 w-3" />
-                  Processing Pack
-                </span>
-                <h1 className="text-xl font-bold tracking-tight text-zinc-100 mt-2">
-                  Analyzing & Generating
-                </h1>
+          ) : error ? (
+            /* Error State Card */
+            <section className="w-full max-w-xl rounded-xl border border-destructive/25 bg-card/40 backdrop-blur-md p-8 text-center shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-destructive" />
+              
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 border border-destructive/20 text-destructive mb-6">
+                <AlertCircle className="h-6 w-6" />
               </div>
-              <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-            </div>
 
-            <p className="text-xs text-zinc-400 leading-relaxed mb-8">
-              Our AI pipelines are extracting text, executing OCR recovery (if required), structuring explanations, and compiling your study materials. This may take up to a minute.
-            </p>
+              <span className="text-[10px] font-semibold text-destructive bg-destructive/10 border border-destructive/25 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                Compilation Failed
+              </span>
+              
+              <h1 className="mt-4 text-2xl font-bold tracking-tight">
+                Could not compile pack
+              </h1>
+              
+              <p className="mt-2 text-sm text-muted-foreground px-4">
+                {getDisplayErrorMessage()}
+              </p>
 
-            {/* Stepper Pipeline */}
-            <div className="space-y-1">
-              {PIPELINE_STEPS.map((step, idx) => {
-                const stepState = getStepState(step.id, idx);
-                
-                return (
-                  <div key={step.id}>
-                    <div className="flex items-center gap-3 py-1.5">
-                      {/* Step Status Icon */}
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center">
-                        {stepState === "completed" && (
-                          <CheckCircle2 className="h-5.5 w-5.5 text-indigo-400" />
-                        )}
-                        {stepState === "running" && (
-                          <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
-                        )}
-                        {stepState === "failed" && (
-                          <AlertCircle className="h-5.5 w-5.5 text-red-500 animate-pulse" />
-                        )}
-                        {stepState === "pending" && (
-                          <div className="h-4 w-4 rounded-full border border-zinc-800 bg-zinc-900" />
-                        )}
+              {/* Technical details collapse */}
+              <div className="mt-6 text-left max-w-md mx-auto">
+                <button 
+                  onClick={() => setShowTechDetails(!showTechDetails)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer select-none font-medium flex items-center gap-1.5 transition-colors focus:outline-none"
+                >
+                  <span className={`inline-block transition-transform duration-200 ${showTechDetails ? "rotate-90" : ""}`}>
+                    ▶
+                  </span>
+                  {showTechDetails ? "Hide technical details" : "Show technical details"}
+                </button>
+                {showTechDetails && (
+                  <div className="mt-2.5 p-3.5 rounded-lg bg-destructive/5 border border-destructive/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <span className="text-[10px] text-destructive/80 font-mono block mb-1">Raw Exception Dump</span>
+                    <p className="text-xs text-destructive font-mono leading-relaxed break-all">
+                      {error}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <p className="mt-4 text-[10px] text-muted-foreground/60 font-mono">
+                Job ID: {jobId}
+              </p>
+
+              <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+                <Button asChild className="gap-2 font-semibold">
+                  <Link to="/upload">
+                    <RefreshCw className="h-4 w-4" />
+                    Retry Upload
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="gap-2 border-border/80 font-semibold">
+                  <Link to="/upload">
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Upload
+                  </Link>
+                </Button>
+              </div>
+            </section>
+          ) : (
+            /* Processing Flow Card */
+            <section className="w-full max-w-xl rounded-xl border border-border bg-card/45 backdrop-blur-md p-8 shadow-xl relative">
+              <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-6">
+                <div>
+                  <span className="text-[10px] font-semibold text-primary bg-primary/10 border border-primary/25 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5 w-max">
+                    <Sparkles className="h-3 w-3" />
+                    Processing {mode === "STUDY_PACK" ? "Study Pack" : "Answer Pack"}
+                  </span>
+                  <h1 className="text-xl font-bold tracking-tight mt-2">
+                    Analyzing & Generating
+                  </h1>
+                </div>
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              </div>
+
+              <p className="text-xs text-muted-foreground leading-relaxed mb-8">
+                Our AI pipelines are extracting text, executing OCR recovery, structuring explanations, and compiling your study materials. This may take up to a minute.
+              </p>
+
+              {/* Stepper Pipeline */}
+              <div className="space-y-1">
+                {currentSteps.map((step, idx) => {
+                  const stepState = getStepState(step.id, idx);
+                  
+                  return (
+                    <div key={step.id}>
+                      <div className="flex items-center gap-3 py-1.5">
+                        {/* Step Status Icon */}
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+                          {stepState === "completed" && (
+                            <CheckCircle2 className="h-5.5 w-5.5 text-primary" />
+                          )}
+                          {stepState === "running" && (
+                            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                          )}
+                          {stepState === "failed" && (
+                            <AlertCircle className="h-5.5 w-5.5 text-destructive animate-pulse" />
+                          )}
+                          {stepState === "pending" && (
+                            <div className="h-3.5 w-3.5 rounded-full border border-border bg-background" />
+                          )}
+                        </div>
+
+                        {/* Step Text Label */}
+                        <span className={`text-xs font-medium transition-colors duration-300 ${
+                          stepState === "completed" 
+                            ? "text-muted-foreground/60 line-through decoration-border" 
+                            : stepState === "running"
+                              ? "text-foreground font-semibold"
+                              : stepState === "failed"
+                                ? "text-destructive font-semibold"
+                                : "text-muted-foreground/40"
+                        }`}>
+                          {step.label}
+                        </span>
                       </div>
 
-                      {/* Step Text Label */}
-                      <span className={`text-xs font-medium transition-colors duration-300 ${
-                        stepState === "completed" 
-                          ? "text-zinc-400 line-through decoration-zinc-800/50" 
-                          : stepState === "running"
-                            ? "text-zinc-200 font-semibold"
-                            : stepState === "failed"
-                              ? "text-red-400 font-semibold"
-                              : "text-zinc-600"
-                      }`}>
-                        {step.label}
-                      </span>
+                      {/* Stepper Connector Line */}
+                      {idx < currentSteps.length - 1 && (
+                        <div className="h-5 w-0.5 bg-border ml-3" />
+                      )}
                     </div>
+                  );
+                })}
+              </div>
 
-                    {/* Stepper Connector Line */}
-                    {idx < PIPELINE_STEPS.length - 1 && (
-                      <div className="h-5 w-0.5 bg-zinc-800/50 ml-3" />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-8 pt-4 border-t border-zinc-800/40 flex items-center justify-between text-[11px] text-zinc-500 font-mono">
-              <span>JOB ID: {jobId}</span>
-              <span>FILE: {jobData?.file_name || "loading..."}</span>
-            </div>
-          </section>
-        )}
+              <div className="mt-8 pt-4 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
+                <span>JOB ID: {jobId}</span>
+                <span>FILE: {jobData?.file_name || "loading..."}</span>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );
