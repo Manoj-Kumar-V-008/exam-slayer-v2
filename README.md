@@ -7,138 +7,160 @@ sdk: docker
 pinned: false
 ---
 
-# Exam Slayer V2 🚀
-### AI-Powered University Exam Preparation Engine
+<p align="center">
+  <img src="assets/logo.png" width="180" alt="Exam Slayer V2 Logo" />
+</p>
 
-[![Python](https://img.shields.io/badge/Python-3.11-3776AB.svg?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![React](https://img.shields.io/badge/React-18.2-61DAFB.svg?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-5.2-646CFF.svg?style=flat-square&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Docker](https://img.shields.io/badge/Docker-Container-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Gemini API](https://img.shields.io/badge/Gemini_API-3.5_Flash-4285F4.svg?style=flat-square&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
-[![Hugging Face](https://img.shields.io/badge/%F0%9F%A5%97_Hugging_Face-Spaces-FFD21E.svg?style=flat-square)](https://huggingface.co/spaces)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+<h1 align="center">Exam Slayer V2</h1>
 
----
+<p align="center">
+  <b>The ultimate AI-powered university exam preparation engine. Solve past papers, summarize slides, and build custom exam-ready PDF study guides in seconds.</b>
+</p>
 
-## 🎯 Why This Project Exists
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11" />
+  <img src="https://img.shields.io/badge/FastAPI-0.109+-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-18.2-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-5.2-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Gemini_API-3.5_Flash-4285F4?style=for-the-badge&logo=google-gemini&logoColor=white" alt="Gemini API" />
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License" />
+</p>
 
-University exam preparation is historically inefficient. Students waste valuable study hours manually sorting through dense, disorganized past question papers (PYQs), cross-referencing slides, searching scattered lecture transcripts, and typing out sample answers. 
-
-**Exam Slayer V2** solves this bottleneck by automating the pipeline:
-$$\text{Ingestion} \longrightarrow \text{Structure Parsing} \longrightarrow \text{AI Solving} \longrightarrow \text{Print-Ready Export}$$
-
-By feeding raw course notes and question banks into a high-performance orchestration engine, students receive custom-tailored, exam-ready study packs and solved answer guides in seconds.
-
----
-
-## 💻 Product Overview
-
-Exam Slayer V2 operates in two distinct, production-tuned preparation modes:
-
-*   **Study Guide Pack Mode (Notes-Only)**: Instantly processes unstructured course materials, textbooks, or presentation slides. The engine outputs conceptual summaries, intuitive analogies, memory tricks (mnemonics), predictive 2/5/10 mark exam questions, and lists of common academic pitfalls.
-*   **Solved Answer Pack Mode (Notes + Questions)**: Takes a raw exam/question paper along with your study material. The engine parses individual questions, classifies their marks/cognitive levels, dynamically retrieves relevant source facts, synthesizes concise answers matching the mark constraints, and designs a comprehensive study key.
+<p align="center">
+  <a href="https://manoj-v-exam-slayer-v2.hf.space"><b>🌐 Live App Demo</b></a> |
+  <a href="#-features"><b>✨ Features</b></a> |
+  <a href="#%EF%B8%8F-architecture-flow"><b>🏗️ Architecture</b></a> |
+  <a href="#-local-installation--setup"><b>💻 Installation</b></a>
+</p>
 
 ---
 
-## ✨ Core Features
+## 🌟 Why Exam Slayer V2?
 
-*   **Dual-Mode Compilation**: Pick between a structured revision guide (**Study Pack**) or a target-solved exam key (**Answer Pack**).
-*   **Hybrid Question Parsing**: Combines deterministic structural rules (regex, typography) with Google Gemini AI normalization to isolate clean question boundaries from messy input documents.
-*   **Marks-Aware Synthesis**: Adapts answer length and detail level based on question weights (e.g., short 2-mark definitions vs. comprehensive 10-mark architectural essays).
-*   **Multi-Model Fallback Routing**: Leverages high-speed Gemini models with automatic routing and fallback logic to guarantee prompt delivery even during heavy API load.
-*   **Advanced OCR Recovery**: Scanned exam papers, notes, or image-only documents are automatically processed through the `Tesseract OCR` pipeline to recover raw text.
-*   **Beautiful PDF Rendering**: Uses `WeasyPrint` to compile a professional, paginated, print-ready PDF containing customized margins, elegant page breaks, covers, and typography styles.
-*   **Dynamic Long-Form Batching**: Implements segmented prompts and windowed assembly to ensure large question banks can be answered in full without hitting output token caps.
-*   **Docker Containerization & HF Spaces**: Built to run anywhere. Deployed seamlessly as a container on Hugging Face Spaces.
+University exam preparation is historically inefficient. Students waste valuable study hours:
+* 📉 **Sifting through cluttered folders** of old question papers and past tests (PYQs).
+* 📑 **Searching scattered lecture notes**, presentation slides, and long transcripts.
+* ✍️ **Wasting hours formatting answers** to fit strict grading constraints (2/5/10 marks).
+
+**Exam Slayer V2** automates the entire ingestion, parsing, solving, and PDF compilation workflow, turning messy exam materials into beautifully formatted, print-ready study packs in under a minute.
+
+---
+
+## 📦 Dual Preparation Modes
+
+Exam Slayer V2 operates in two production-ready compiler pathways to fit different stages of revision:
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3 align="center">📚 Study Guide Pack Mode</h3>
+      <p align="center"><i>Best for notes-only conceptual synthesis.</i></p>
+      <hr>
+      <ul>
+        <li>💡 <b>Intuitive Conceptual Summaries</b>: Condenses dense textbooks into readable chapters.</li>
+        <li>🧠 <b>Academic Mnemonics</b>: Automatically designs memory aids and tricks.</li>
+        <li>🔮 <b>Predictive Exam Questions</b>: Generates predicted questions for 2, 5, and 10 marks.</li>
+        <li>⚠️ <b>Common Pitfalls</b>: Highlights frequent mistakes students make on these topics.</li>
+      </ul>
+    </td>
+    <td width="50%" valign="top">
+      <h3 align="center">🧠 Solved Answer Pack Mode</h3>
+      <p align="center"><i>Best for notes + past exam papers.</i></p>
+      <hr>
+      <ul>
+        <li>🎯 <b>Targeted Question Solving</b>: Solves your exact test paper based on local notes.</li>
+        <li>📏 <b>Marks-Aware Brevity</b>: Automatically structures answers based on marks weight.</li>
+        <li>📖 <b>Integrated Code & Formulas</b>: Formats mathematics and source code logic cleanly.</li>
+        <li>✅ <b>Hallucination Prevention</b>: Grounds answers inside your provided course context.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+---
+
+## ✨ Features
+
+- **Hybrid Question Parsing**: Uses structural algorithms (regex, typography) coupled with Google Gemini AI to accurately segment question bounds in unstructured documents.
+- **Context-Aided RAG Architecture**: Direct grounding in uploaded study guides to guarantee answers align with course-specific syllabi.
+- **Dynamic Answer Batching**: Orchestrates segmented API queries to solve large question papers completely without running into model context windows or token limits.
+- **Advanced OCR Support**: Integrated with `Tesseract OCR` to extract clean text from scanned exam papers and handwriting.
+- **Multi-Model Fallback Routing**: Auto-routing between Gemini models to maintain low latency and high availability.
+- **Paged PDF Engine**: Utilizes `WeasyPrint` with Paged CSS rules to export gorgeous paginated booklets with customized cover badges, page breaks, and margin notes.
+- **Modern Responsive GUI**: Sleek React dashboard featuring radial glow aesthetics, theme switching, and real-time step trackers.
 
 ---
 
 ## 🏗️ Architecture Flow
 
-Below is the conceptual flow of the Exam Slayer V2 compilation engine:
+The following interactive diagram shows how text inputs are ingested, processed, solved, and exported:
 
-```text
-    [ Question Bank / PYQ ]            [ Lecture Notes / Slides / PDFs ]
-              │                                      │
-              ▼                                      ▼
-     Text Extraction & OCR                 Text Ingestion & Parsing
-    (Tesseract / python-docx)             (Multi-file Document Parser)
-              │                                      │
-              ▼                                      ▼
-    Deterministic Pre-Parser                 Knowledge Corpus
-              │                                      │
-              ▼                                      │
-    Gemini Normalization &                           │
-    Marks Classification                             │
-              │                                      │
-              ▼                                      │
-        Routing Engine ◄─────────────────────────────┘
-  (Dynamic Context Matching & RAG)
-              │
-              ▼
-   Adaptive Answer Synthesis
-  (Marks-Aware Context Windowing)
-              │
-              ▼
-   HTML Layout Generation
-  (Jinja2 & Tailwind Components)
-              │
-              ▼
-    WeasyPrint PDF Engine
-              │
-              ▼
-    [ Downloadable Exam Pack ]
+```mermaid
+flowchart TD
+    %% Colors & Styles
+    classDef input fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b;
+    classDef process fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c;
+    classDef route fill:#efebe9,stroke:#5d4037,stroke-width:2px,color:#3e2723;
+    classDef output fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20;
+    classDef ocr fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100;
+
+    %% Nodes
+    QB["📝 Question Bank (PDF/DOCX)"]:::input
+    Notes["📚 Lecture Notes / Syllabus"]:::input
+    
+    OCR["🔍 OCR Text Extraction (Tesseract)"]:::ocr
+    Parser["⚙️ Deterministic Pre-Parser"]:::process
+    Classify["🧠 Gemini Classification & Boundary Parser"]:::process
+    
+    Router["🔀 Gemini Routing Engine (RAG)"]:::route
+    
+    Solve["⚡ Marks-Aware Adaptive Solving"]:::process
+    Render["🎨 HTML & Tailwind Templating (Jinja2)"]:::process
+    Weasy["📄 WeasyPrint PDF Generation"]:::process
+    
+    Pack["🏆 Final Print-Ready Exam Pack"]:::output
+
+    %% Connections
+    QB --> OCR
+    OCR --> Parser
+    Parser --> Classify
+    Classify --> Router
+    
+    Notes --> Router
+    Router --> Solve
+    Solve --> Render
+    Render --> Weasy
+    Weasy --> Pack
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Technical Stack
 
-### Frontend
-*   **React** (TypeScript, SPA architecture)
-*   **Vite** (Build tool & development server)
-*   **Tailwind CSS** (Modern utility-first styling)
-*   **Lucide React** (Crisp vector iconography)
-
-### Backend
-*   **Python 3.11**
-*   **FastAPI** (High-performance API routing and async job processing)
-*   **Uvicorn** (ASGI server)
-*   **Jinja2** (Dynamic HTML compilation engine)
-
-### AI & Language Models
-*   **Google Gemini API** (Gemini 2.5 Flash & fallbacks for parsing, classification, and answering)
-*   **Custom RAG & Context Window Manager**
-
-### PDF & Document Processing
-*   **WeasyPrint** (HTML-to-PDF compilation engine utilizing CSS Paged Media standards)
-*   **Tesseract OCR** (Optical character recognition engine for scanned documents)
-*   **python-docx, PyPDF2, python-pptx** (Native binary text extractors)
-
-### Infrastructure
-*   **Docker** (Multi-stage production build)
-*   **Hugging Face Spaces** (Cloud hosting environment)
+| Layer | Technologies |
+| --- | --- |
+| **Frontend** | ![React](https://img.shields.io/badge/React-18.2-61DAFB?style=flat-square&logo=react&logoColor=black) ![Vite](https://img.shields.io/badge/Vite-5.2-646CFF?style=flat-square&logo=vite&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white) |
+| **Backend** | ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?style=flat-square&logo=fastapi&logoColor=white) ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white) |
+| **AI Core** | ![Gemini](https://img.shields.io/badge/Google_Gemini-3.5_Flash-4285F4?style=flat-square&logo=google-gemini&logoColor=white) |
+| **OCR & PDF** | ![Tesseract](https://img.shields.io/badge/Tesseract_OCR-4.0-red?style=flat-square) ![WeasyPrint](https://img.shields.io/badge/WeasyPrint-61.0-blueviolet?style=flat-square) |
+| **Infra** | ![Docker](https://img.shields.io/badge/Docker-Container-2496ED?style=flat-square&logo=docker&logoColor=white) ![Hugging Face](https://img.shields.io/badge/Hugging_Face-Spaces-FFD21E?style=flat-square) |
 
 ---
 
-## 📸 Screenshots
+## 📸 App Preview
 
-| Upload Dashboard | Generation Progress |
-| --- | --- |
-| ![Upload Dashboard](https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80) | ![Processing Screen](https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&w=600&q=80) |
-
-| Solved Answer Pack Preview | PDF Print Output |
-| --- | --- |
-| ![Result Screen](https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&w=600&q=80) | ![PDF Document Preview](https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80) |
-
-*(Real application UI screenshot placeholders. Replaced with actual visuals upon final deployment.)*
+<p align="center">
+  <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" width="48%" alt="Upload Interface Preview" />
+  &nbsp;
+  <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80" width="48%" alt="Solved PDF Compilation Preview" />
+</p>
 
 ---
 
 ## 🚀 Live Demo
 
-Access the live, production-grade application running on Hugging Face Spaces:
+Interact with the production system deployed on Hugging Face Spaces:
 
 🔗 **[https://manoj-v-exam-slayer-v2.hf.space](https://manoj-v-exam-slayer-v2.hf.space)**
 
@@ -147,84 +169,69 @@ Access the live, production-grade application running on Hugging Face Spaces:
 ## 💻 Local Installation & Setup
 
 ### Prerequisites
-*   Python 3.11+
-*   Node.js 18+
-*   [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) (Required for OCR of scanned images/PDFs)
-*   [GTK+ / Pango / Cairo libraries](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation) (Required by WeasyPrint for PDF rendering)
+1. **Python 3.11+** & **Node.js 18+**
+2. **Tesseract OCR**: Install via package manager (`brew install tesseract` on macOS, `sudo apt install tesseract-ocr` on Ubuntu, or installer on Windows).
+3. **GTK/Pango/Cairo**: Required by WeasyPrint for compiling CSS paged media. Follow [WeasyPrint installation guides](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html#installation) for your OS.
 
-### 1. Setup Backend
-Open a terminal in the `backend/` directory:
-
+### 1. Backend Setup
 ```powershell
-# Move to backend folder
+# Navigate to backend and create env
 cd backend
-
-# Create virtual environment
 python -m venv .venv
 
-# Activate virtual environment
-# On Windows:
+# Activate Virtual Env (Windows Powershell)
 .\.venv\Scripts\activate
-# On macOS/Linux:
-source .venv/bin/activate
 
-# Install dependencies
+# Install requirements
 pip install -r requirements.txt
 ```
 
-#### Environment Variables
-Create a file named `.env` in the `backend/` directory:
+Create a `.env` file in the `backend/` directory:
 ```env
-GEMINI_API_KEY=your_google_gemini_api_key_here
-TESSERACT_CMD=tesseract  # Adjust to absolute path if not in system PATH
+GEMINI_API_KEY=your_gemini_api_key_here
+TESSERACT_CMD=tesseract
 DEBUG=True
 FILE_RETENTION_HOURS=24
 ```
 
-#### Run Backend Server
+Start the FastAPI application server:
 ```powershell
 uvicorn app.main:app --reload
 ```
-The API documentation will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
+Swagger UI documentation endpoints will spin up at [http://localhost:8000/docs](http://localhost:8000/docs).
 
 ---
 
-### 2. Setup Frontend
-Open a terminal in the `frontend/` directory:
-
+### 2. Frontend Setup
+Open another terminal:
 ```powershell
-# Move to frontend folder
+# Navigate to frontend and install modules
 cd frontend
-
-# Install dependencies
 npm install
 
-# Start development server
+# Start Vite dev server
 npm run dev
 ```
-The React frontend will launch on [http://localhost:5173](http://localhost:5173) and automatically proxy API calls to the local FastAPI backend.
+Open [http://localhost:5173](http://localhost:5173) in your web browser.
 
 ---
 
-## 🐳 Deployment
+## 🐳 Production Deployment
 
-### Local Docker Build
-Ensure Docker is installed, then run the following in the project root:
-
+### Docker Container Build
+Build and run the unified frontend + backend image locally:
 ```bash
-# Build the combined production image
+# Build production Docker image
 docker build -t exam-slayer-v2 .
 
-# Run the container locally
+# Spin up container on local port 7860
 docker run -p 7860:7860 -e GEMINI_API_KEY="your_api_key" exam-slayer-v2
 ```
-Access the application locally at [http://localhost:7860](http://localhost:7860).
 
-### Hugging Face Space Deployment
-The application is configured to deploy directly to Hugging Face Spaces using the Docker SDK:
-1. Create a **Docker** Space on Hugging Face.
-2. Add your `GEMINI_API_KEY` under the **Repository Secrets** in Space settings.
-3. Add the Hugging Face Git remote and push the branch:
+### Deploying to Hugging Face Spaces
+1. Create a new **Docker Space** in Hugging Face.
+2. In Space settings, register your `GEMINI_API_KEY` as a repository secret.
+3. Configure the Hugging Face Git remote and push:
    ```bash
    git remote add hf https://huggingface.co/spaces/Manoj-V/Exam-Slayer-V2
    git push hf main
@@ -232,33 +239,33 @@ The application is configured to deploy directly to Hugging Face Spaces using th
 
 ---
 
-## 📖 Usage Guide
+## 📖 Step-by-Step Usage
 
-1.  **Select Preparation Mode**: Choose between **Study Guide Pack** or **Solved Answer Pack**.
-2.  **Upload Lecture Materials**: Drag and drop notes, slides, or syllabus docs (up to 5 files, maximum 40MB total).
-3.  **Upload Question Bank** *(Answer Pack Mode only)*: Select the past paper, question list, or assignment document.
-4.  **Click Compile / Solve**: The backend processes document text, runs OCR if needed, extracts question blocks, queries Gemini with relevant context, and renders the result.
-5.  **Download PDF**: Preview your answers directly in the web app, then download the beautifully paginated PDF for offline study.
+1. **Select Preparation Mode**: Choose **Study Guide Pack** or **Solved Answer Pack**.
+2. **Upload Course Notes**: Add lecture notes, transcripts, or textbooks (PDF/DOCX/PPTX, up to 5 files).
+3. **Ingest Exam Bank** *(Answer Pack Mode)*: Upload the past paper or test paper you want solved.
+4. **Compile**: The RAG orchestrator splits papers, classifications marks, triggers queries, and structures the answer guide.
+5. **Download**: Preview generated responses dynamically, and click download to fetch the paginated, print-ready PDF booklet.
 
 ---
 
-## ⚠️ Known Limitations
+## ⚠️ Known Constraints & Limitations
 
-*   **OCR Scanning Quality**: Scan quality directly affects text extraction. If a scanned document is heavily smudged, slanted, or blurry, WeasyPrint and Gemini may receive incomplete text.
-*   **Context Grounding**: AI answers are grounded in the uploaded study materials. If your uploaded notes do not contain the concepts required to answer a specific question, the engine will attempt to answer using general academic reasoning, but specificity may decrease.
-*   **Mathematical Formula Formatting**: Extremely complex, multi-line mathematical matrices or hand-drawn schematics in scanned papers may not translate perfectly through plain text OCR.
+* **OCR Accuracy Dependency**: Heavily smudged scans, slanted handwriting, or degraded documents will limit OCR text quality, causing cascade parsing issues in downstream LLMs.
+* **Context Coverage**: Answers are strictly grounded in uploaded files. If details are missing from course notes, the model infers answers using general logic, which may not match specific syllabus grading keys.
+* **Complex Formatting Ingestion**: Complex hand-drawn circuit schematics, vector diagrams, or multi-dimensional matrices in scanned files might not translate cleanly to textual representations.
 
 ---
 
 ## 🗺️ Future Roadmap
 
-*   **Smarter Subject-Aware Agents**: Integration of specialized solvers for mathematical equations (e.g. SymPy integration) and programming questions (syntax-highlit code blocks).
-*   **Adaptive Styling Templates**: Choice of multiple professional CSS templates for the generated PDF packs (e.g. Executive, Academic, Minimalist, Dark Theme).
-*   **Semantic Pack Caching**: Implement vector-based caching of similar questions to cut API latency and decrease generation costs.
-*   **Real-time Collaborative Sharing**: Sharing links for solved study packs, allowing class peers to study from the same compiled pack.
+* **⚡ Smart Domain solvers**: Incorporate specialized parsing agents for mathematical notations (LaTeX conversion) and code scripts (syntax-highlighted blocks).
+* **🎨 Rich Formatting Templates**: Introduce multiple themed PDF layout templates (e.g. Minimalist, Classic Academic, Slate Dark).
+* **💾 Semantic Cache Layer**: Integrate vector semantic search database to match and cache common question patterns, reducing API overhead.
+* **🤝 Study Groups Sharing**: Introduce collaborative shared links to host compilations directly.
 
 ---
 
 ## 📄 License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+Distributed under the MIT License. See [LICENSE](LICENSE) for more details.
