@@ -70,10 +70,22 @@ export function ResultPage() {
     if (API_BASE_URL.startsWith("http://") || API_BASE_URL.startsWith("https://")) {
       try {
         const baseUrlObj = new URL(API_BASE_URL);
-        return `${baseUrlObj.origin}${pdfUrlPath}`;
+        const isLocalhostBase = baseUrlObj.hostname === "localhost" || baseUrlObj.hostname === "127.0.0.1";
+        const isCurrentLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        
+        // Safety check: If we are running in production (not localhost) but the baked API base is localhost,
+        // bypass localhost and use current window origin to prevent redirecting to localhost.
+        if (!isCurrentLocalhost && isLocalhostBase) {
+          return `${window.location.origin}${pdfUrlPath.startsWith("/") ? "" : "/"}${pdfUrlPath}`;
+        }
+        return `${baseUrlObj.origin}${pdfUrlPath.startsWith("/") ? "" : "/"}${pdfUrlPath}`;
       } catch (e) {
         const match = API_BASE_URL.match(/^https?:\/\/[^\/]+/);
-        const host = match ? match[0] : window.location.origin;
+        let host = match ? match[0] : window.location.origin;
+        const isCurrentLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+        if (!isCurrentLocalhost && (host.includes("localhost") || host.includes("127.0.0.1"))) {
+          host = window.location.origin;
+        }
         return `${host}${pdfUrlPath.startsWith("/") ? "" : "/"}${pdfUrlPath}`;
       }
     }
