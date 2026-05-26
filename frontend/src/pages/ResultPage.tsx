@@ -67,14 +67,19 @@ export function ResultPage() {
       return pdfUrlPath;
     }
 
-    try {
-      const baseUrlObj = new URL(API_BASE_URL);
-      return `${baseUrlObj.origin}${pdfUrlPath}`;
-    } catch (e) {
-      const match = API_BASE_URL.match(/^https?:\/\/[^\/]+/);
-      const host = match ? match[0] : "http://localhost:8000";
-      return `${host}${pdfUrlPath.startsWith("/") ? "" : "/"}${pdfUrlPath}`;
+    if (API_BASE_URL.startsWith("http://") || API_BASE_URL.startsWith("https://")) {
+      try {
+        const baseUrlObj = new URL(API_BASE_URL);
+        return `${baseUrlObj.origin}${pdfUrlPath}`;
+      } catch (e) {
+        const match = API_BASE_URL.match(/^https?:\/\/[^\/]+/);
+        const host = match ? match[0] : window.location.origin;
+        return `${host}${pdfUrlPath.startsWith("/") ? "" : "/"}${pdfUrlPath}`;
+      }
     }
+
+    // In production where API_BASE_URL is relative (e.g. "/api/v1"), return relative URL directly
+    return pdfUrlPath;
   };
 
   const handleDownload = () => {
