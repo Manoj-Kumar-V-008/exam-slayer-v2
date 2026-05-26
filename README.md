@@ -1,3 +1,12 @@
+---
+title: Exam Slayer V2
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # Exam Slayer V2
 
 FastAPI backend for turning uploaded study materials into exam-ready study pack PDFs using OCR, Gemini, and WeasyPrint.
