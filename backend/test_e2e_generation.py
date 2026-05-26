@@ -70,9 +70,9 @@ def run_test():
         sys.exit(1)
         
     print("\n--- TEST 2: Fallback Run (Mocking primary model failure) ---")
-    # Temporarily set ANSWER_PACK_MODELS to force routing through invalid model first, then to gemini-2.5-flash
+    # Temporarily set ANSWER_PACK_MODELS to force routing through invalid model first, then to gemini-3.1-flash-lite
     original_models = settings.ANSWER_PACK_MODELS
-    settings.ANSWER_PACK_MODELS = ["gemini-invalid-model-name-mock", "gemini-2.5-flash"]
+    settings.ANSWER_PACK_MODELS = ["gemini-invalid-model-name-mock", "gemini-3.1-flash-lite"]
     print(f"Set ANSWER_PACK_MODELS = {settings.ANSWER_PACK_MODELS} (forcing invalid model fallback)")
     print("This will verify that the routing utility automatically switches to the valid fallback model.")
     

@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
 
     # Batching and Context Limits
-    ANSWER_PACK_BATCH_SIZE: int = 5
+    ANSWER_PACK_BATCH_SIZE: int = 2
     MAX_ANSWER_PACK_CONTEXT_CHARS: int = 40000
     
     # Directories (resolved absolute paths)

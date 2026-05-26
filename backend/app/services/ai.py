@@ -96,12 +96,13 @@ def _solve_question_batch(
         q_num = pq.get("question_number", f"Question {idx + 1}")
         q_text = pq.get("question_text", "")
         q_marks = pq.get("likely_marks") or "Unknown"
-        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Text: {q_text}\n"
+        q_type = pq.get("question_type") or "theory"
+        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Type: {q_type} | Text: {q_text}\n"
 
     prompt = f"""
-You are a highly concise, expert AI Solved Answer Pack Compiler.
+You are an expert AI Solved Answer Pack Compiler.
 Your goal is to solve a specific list of parsed exam questions by referring to the provided study notes.
-The target student wants to finish reading this pack quickly and feel confident. Every word must count.
+The target output is a set of premium, university-exam model answers designed to maximize scoring.
 
 === STUDY MATERIALS ===
 {compressed_context}
@@ -109,40 +110,55 @@ The target student wants to finish reading this pack quickly and feel confident.
 === TARGET QUESTIONS TO SOLVE IN THIS BATCH ===
 {questions_list_str}
 
-CRITICAL RULES FOR BREVITY, EXAM FOCUS & VALUE DENSITY (COMPENSATE FOR LIGHTER MODELS):
+CRITICAL RULES FOR MARKS-AWARE ANSWER DEPTH & QUESTION TYPE FORMATTING:
 1. STRICT WORD LIMITS PER QUESTION (For the 'answer' field):
-   - If the marks category is "2 Marks", the answer MUST be extremely direct, concise and short: 30 to 70 words. State the definition or direct answer instantly. Do NOT add unnecessary background or introductory fluff.
-   - If the marks category is "5 Marks", the answer MUST be between 100 and 180 words. Keep it compact, high-value, and direct. Use bullets for core elements and a short explanation.
-   - If the marks category is "10 Marks", the answer MUST be between 200 and 380 words. Provide key concepts, structured comparison, or procedure details using concise bullet formatting. Detailed but revision-friendly; strictly avoid textbook essays or historical background.
-2. NO VERBOSITY OR ACADEMIC FLUFF:
-   - Do NOT write introductory filler like "In this section we will look at..." or "As described in the study notes...".
-   - Start immediately with the direct answer.
-   - Never repeat definitions or concepts within the same answer.
-   - Use examples ONLY if they are brief and genuinely help clarify the concept.
-3. STRUCTURED CONTENT RENDERING (CRITICAL):
-   - **SQL & Code Snippets:** Wrap all programming code, database schemas, and SQL queries in proper markdown code blocks (e.g., use ```sql ... ``` or ```c ... ```).
-   - **Tabular Comparisons & Structured Data:** If a question asks for comparisons (e.g., "DBMS vs File Systems" or "Logical vs Physical independence") or lists differences, advantages/disadvantages, you MUST render them inside a clean **markdown table** (e.g. `| Column 1 | Column 2 |` with `|---|---|` dividers). Do NOT use plain ASCII layouts.
-4. TOPPER-GRADE ACADEMIC QUALITY:
-   - Provide topper-grade academic answers. Use precise technical terminology.
-   - Bold critical terms when they are first defined.
-   - Make the `memory_trick` highly relevant, such as creative acronyms or mnemonics (e.g. "ACID = Atomicity, Consistency, Isolation, Durability").
-5. SCHEMA FIELD BREVITY (CONCISE OUTPUT):
+   - You MUST satisfy these word counts for every single question. Writing too short answers is a severe failure.
+   - 2 Marks: 80–150 words. Direct answer only.
+   - 5 Marks: 200–350 words. Structured explanation + brief example.
+   - 10 Marks: 450–800 words. Deep, highly detailed, exam-ready response. You must expand the concepts comprehensively, explain all relevant parts, give clear step-by-step processes or schema diagrams, add code/queries if applicable, compare alternatives, and write a thorough, deep, university-level answer. Do not write short summaries or brief outlines.
+   - NOTE: Since the provided study notes may be brief summary pointers, you MUST expand the answers using your own deep academic domain knowledge to meet these word limits. If you write less than 450 words for a 10 Marks question or less than 200 words for a 5 Marks question, it will fail validation. You have plenty of output token space because this batch contains limited questions. Use it to write a comprehensive, long, detailed response.
+   - If the marks category is "Unknown" or missing in the target list, infer the marks based on complexity (e.g., direct definitions -> 2 marks, comparisons/explanations -> 5 marks, design/complex analysis/SQL schema queries -> 10 marks) and apply the correct word limits.
+
+2. FORMATTING RULES BY QUESTION TYPE (For the 'answer' field):
+   - 'theory': Must contain:
+     - Introduction: Concise definition/context.
+     - Explanation: Multi-layered structured explanation of concepts.
+     - Examples: Real-world or academic examples.
+     - Comparisons: (If relevant) comparative analysis.
+     - Mnemonic: Memory hook/acronym.
+     - Quick Revision Summary: Key takeaway bullets.
+   - 'sql': Directly output query blocks using markdown (```sql ... ```). Follow with line-by-line mechanical explanation and column meanings. Strictly avoid conversational chatbot-style filler.
+   - 'relational_algebra': Output formal algebraic expressions. Provide operator breakdowns.
+   - 'er_model': Output relational schema attributes (underlined PK, italic FK), key constraints, mapping steps, and details.
+   - 'definition': Concise, clear, high-scoring academic definition.
+   - 'comparison': Must render a clean markdown table comparing key metrics. Do not use plain text lists.
+   - 'problem_solving': Clear step-by-step mathematical/procedural solution.
+   - 'mixed': Combine query blocks and step-by-step structured theory as appropriate.
+
+3. UNIVERSITY-GRADE QUALITY & STYLE:
+   - Target a formal, academic, clear, teacher-friendly, university exam scoring-oriented tone.
+   - Strictly avoid chatbot-style dialogue, conversational filler (e.g., "Sure, here is the answer", "In this section we will discuss"), and introductory/concluding remarks.
+   - Use precise technical terminology. Bold key terms when first defined.
+   - Wrap all code, schemas, and queries in proper markdown blocks.
+
+4. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
+   - Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth.
+   - Priority 2 (No Coverage / Missing Notes): If the study notes are insufficient or lack coverage of a question, you must fall back to your general model knowledge silently and seamlessly.
+   - **CRITICAL**: Do NOT append any footnotes, notices, or warning disclaimers like "*(Note: Extended beyond uploaded notes.)*" under any circumstances. Proceed silently and seamlessly.
+
+5. SCHEMA FIELD STRUCTURE:
    Conform to the AnswerPack schema and provide these fields for each question:
    - `question_number`: Exactly as given in target list.
    - `question_text`: Exactly as given in target list.
-   - `marks_category`: "2 Marks", "5 Marks", or "10 Marks".
-   - `answer`: The exam-ready solution conforming strictly to the word limits and markdown rules above. Use bullet points or bold keys where appropriate.
-   - `simple_explanation`: A very brief (max 50 words) intuitive plain-English analogy or high-level summary.
-   - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing the key takeaway.
+   - `marks_category`: "2 Marks", "5 Marks", or "10 Marks" (inferred or explicit).
+   - `question_type`: Exactly as given in target list.
+   - `answer`: The exam-ready solution conforming strictly to the word limits, formatting, and markdown rules above.
+   - `simple_explanation`: A very brief (max 50 words) intuitive plain-English analogy.
+   - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing the key takeaways.
    - `memory_trick`: A short (max 12 words) mnemonic or quick association trigger.
    - `related_assets`: Filename pointers to relevant images in the study materials if any.
 
-CRITICAL SOLVING & DOMAIN KNOWLEDGE EXTENSION RULES:
-- Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth.
-- Priority 2 (Partial Coverage): If the study materials cover the topic only partially, extend the answer with concise, standard academic domain knowledge to produce a complete exam answer.
-- Priority 3 (No Coverage / Missing Notes): If not covered at all, generate a highly useful exam-ready answer using standard academic domain knowledge, and append this exact notice to the end of the answer string:
-  "*(Note: Extended beyond uploaded notes.)*"
-- Keep Unicode math symbols, subscripts, superscripts, and Greek letters (e.g. λ, θ) intact to preserve formula rendering quality.
+Keep Unicode math symbols, subscripts, superscripts, and Greek letters (e.g. λ, θ) intact to preserve formula rendering quality.
 
 Return a structured JSON output conforming to the AnswerPack schema containing the list of SolvedQuestion.
 """
@@ -160,6 +176,7 @@ def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> di
     """
     Sends study materials and parsed questions to Gemini in batches to solve them.
     Features dynamic batch size reduction if solving fails due to schema validation or other errors.
+    Isolates 10 Marks questions into their own single-question batches to guarantee maximum length and depth.
     """
     if not settings.GEMINI_API_KEY:
         logger.error("GEMINI_API_KEY is not configured in settings.")
@@ -169,12 +186,31 @@ def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> di
         logger.warning("Empty parsed questions list provided to solver.")
         return {"title": "Solved Answer Pack", "questions": []}
         
-    logger.info(f"Solving {len(parsed_questions)} questions with dynamic batching and fallback protection...")
+    logger.info(f"Solving {len(parsed_questions)} questions with dynamic marks-aware batching...")
     
     # We initialize the queue of batches.
-    batch_size = settings.ANSWER_PACK_BATCH_SIZE
-    batches_queue = [parsed_questions[i:i + batch_size] for i in range(0, len(parsed_questions), batch_size)]
+    # Group questions: 10 Marks questions get isolated into batches of size 1.
+    # Other questions (2 Marks, 5 Marks) are grouped into batches of up to 3.
+    batches_queue = []
+    current_small_batch = []
     
+    for pq in parsed_questions:
+        marks = pq.get("likely_marks", "") or ""
+        # If it's a 10 Marks question, isolate it in its own batch
+        if "10" in marks:
+            if current_small_batch:
+                batches_queue.append(current_small_batch)
+                current_small_batch = []
+            batches_queue.append([pq])
+        else:
+            current_small_batch.append(pq)
+            if len(current_small_batch) >= 3:
+                batches_queue.append(current_small_batch)
+                current_small_batch = []
+                
+    if current_small_batch:
+        batches_queue.append(current_small_batch)
+        
     all_solved_questions = []
     final_title = "Solved Answer Pack"
     

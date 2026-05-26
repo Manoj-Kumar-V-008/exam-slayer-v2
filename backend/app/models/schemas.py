@@ -21,11 +21,14 @@ class SolvedQuestion(BaseModel):
     question_number: str = Field(..., description="The numbering or label of the question (e.g. 'Question 1', 'Question 2(a)').")
     question_text: str = Field(..., description="The full wording of the question extracted from the question bank.")
     marks_category: Optional[str] = Field(None, description="The estimated or explicit marks category (e.g. '2 Marks', '5 Marks', '10 Marks').")
-    answer: str = Field("", description="The comprehensive, exam-ready answer, tailored based on the provided study notes.")
-    simple_explanation: str = Field(..., description="A simple background explanation or breakdown of the answer for intuitive learning.")
-    quick_revision_points: List[str] = Field(default_factory=list, description="Key summary points/bullets for quick revision of this specific question.")
-    memory_trick: Optional[str] = Field(None, description="A memory aid (mnemonic, acronym, etc.) to help remember this answer if relevant.")
+    question_type: Optional[str] = Field(None, description="The classified type of the question.")
+    answer: str = Field("", description="The comprehensive, exam-ready answer. Strict Word Counts: 2 Marks = 80-150 words; 5 Marks = 200-350 words; 10 Marks = 450-800 words. You MUST expand using domain knowledge to meet these limits. Formatting by type: 'theory' (intro, multi-level structured explanation, examples, mnemonics, quick revision summary); 'sql' (```sql code block -> detailed line explanation -> column meaning); 'er_model' (schemas with underlined PK/italic FK, mapping steps, keys); 'comparison' (clean markdown table comparing metrics); 'problem_solving' (clear step-by-step math/logic).")
+    simple_explanation: str = Field(..., description="A simple background analogy or high-level summary, strictly under 50 words.")
+    quick_revision_points: List[str] = Field(default_factory=list, description="Exactly 3 short bullet points, strictly under 8 words per bullet, summarizing key takeaways.")
+    memory_trick: Optional[str] = Field(None, description="A memory aid (mnemonic, acronym, etc.) to help remember this answer, strictly under 12 words.")
     related_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
+
+
 
 class AnswerPack(BaseModel):
     title: str = Field(..., description="The main subject or title of the answer pack.")
