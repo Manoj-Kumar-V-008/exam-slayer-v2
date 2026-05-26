@@ -129,6 +129,25 @@ if dist_dir.exists():
     if assets_dir.exists():
         app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
     
+    @app.get("/favicon.ico", include_in_schema=False)
+    async def get_favicon_ico():
+        from fastapi import HTTPException
+        ico_path = dist_dir / "favicon.ico"
+        if ico_path.exists():
+            return FileResponse(str(ico_path))
+        png_path = dist_dir / "favicon.png"
+        if png_path.exists():
+            return FileResponse(str(png_path))
+        raise HTTPException(status_code=404, detail="Favicon not found")
+
+    @app.get("/favicon.png", include_in_schema=False)
+    async def get_favicon_png():
+        from fastapi import HTTPException
+        png_path = dist_dir / "favicon.png"
+        if png_path.exists():
+            return FileResponse(str(png_path))
+        raise HTTPException(status_code=404, detail="Favicon not found")
+
     @app.get("/")
     async def serve_root():
         return FileResponse(str(dist_dir / "index.html"))
