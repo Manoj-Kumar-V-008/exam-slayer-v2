@@ -1,0 +1,22 @@
+# Python files
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+backend/.venv/
+backend/.env
+backend/uploads/
+backend/assets/
+backend/outputs/
+
+# Node / Frontend files
+frontend/node_modules/
+frontend/dist/
+frontend/vite-dev*.log
+
+# Git & OS files
+.git/
+.gitignore
+.dockerignore
+.DS_Store
+*.md

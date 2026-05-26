@@ -80,7 +80,8 @@ def run_pdf_extraction_pipeline(
             # 8. Generate PDF via WeasyPrint
             pdf_filename = f"{job_id}_study_pack.pdf"
             pdf_output_path = settings.OUTPUTS_DIR / pdf_filename
-            generate_pdf(html_content, pdf_output_path)
+            base_url = f"http://127.0.0.1:{settings.PORT}/"
+            generate_pdf(html_content, pdf_output_path, base_url=base_url)
             
             # 9. Update job db on complete success
             jobs_db[job_id].update({
@@ -122,7 +123,8 @@ def run_pdf_extraction_pipeline(
             # 8. Generate PDF via WeasyPrint
             pdf_filename = f"{job_id}_answer_pack.pdf"
             pdf_output_path = settings.OUTPUTS_DIR / pdf_filename
-            generate_pdf(html_content, pdf_output_path)
+            base_url = f"http://127.0.0.1:{settings.PORT}/"
+            generate_pdf(html_content, pdf_output_path, base_url=base_url)
             
             # 9. Update job db on complete success
             jobs_db[job_id].update({

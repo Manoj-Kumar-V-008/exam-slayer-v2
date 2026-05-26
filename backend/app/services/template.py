@@ -65,7 +65,7 @@ def render_study_pack_html(study_pack: dict) -> str:
         env = Environment(loader=FileSystemLoader(str(settings.TEMPLATES_DIR)))
         template = env.get_template("study_pack.html")
         
-        assets_dir_url = settings.ASSETS_DIR.resolve().as_uri()
+        assets_dir_url = "/backend-assets"
         
         html_content = template.render(
             study_pack=processed_pack,
@@ -132,7 +132,7 @@ def render_answer_pack_html(answer_pack: dict) -> str:
         env = Environment(loader=FileSystemLoader(str(settings.TEMPLATES_DIR)))
         template = env.get_template("answer_pack.html")
         
-        assets_dir_url = settings.ASSETS_DIR.resolve().as_uri()
+        assets_dir_url = "/backend-assets"
         
         html_content = template.render(
             answer_pack=processed_pack,

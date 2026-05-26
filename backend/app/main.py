@@ -1,6 +1,9 @@
 import os
 import time
+from pathlib import Path
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routes import upload, jobs
@@ -109,6 +112,39 @@ async def health_check():
         debug_mode=settings.DEBUG
     )
 
-# Include routers
 app.include_router(upload.router, prefix=settings.API_V1_STR)
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
+
+# Serve backend extracted assets (images) via HTTP
+app.mount("/backend-assets", StaticFiles(directory=str(settings.ASSETS_DIR)), name="backend-assets")
+
+# Serve built frontend static files if the dist folder exists (checks both Docker and local dev structures)
+dist_dir = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if not dist_dir.exists():
+    dist_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+if dist_dir.exists():
+    # Mount static assets (js, css, images)
+    assets_dir = dist_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+    
+    @app.get("/")
+    async def serve_root():
+        return FileResponse(str(dist_dir / "index.html"))
+    
+    # Catch-all route to serve the React SPA index.html for non-API routes
+    @app.get("/{catchall:path}")
+    async def serve_spa(catchall: str):
+        # Prevent catching API routes
+        if catchall.startswith("api/") or catchall.startswith("api/v1"):
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="API route not found")
+            
+        # If it's a specific file inside dist (like favicon.ico, logo.png), serve it
+        file_path = dist_dir / catchall
+        if file_path.is_file():
+            return FileResponse(file_path)
+        # Fall back to index.html for SPA routing
+        return FileResponse(str(dist_dir / "index.html"))
+
