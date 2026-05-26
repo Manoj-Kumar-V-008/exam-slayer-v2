@@ -8,113 +8,7 @@ from app.config import settings
 from app.models.schemas import AnswerPack, StudyPack
 from app.utils.logger import logger
 from app.utils.text_cleaner import compress_study_context_for_batch
-
-GEMINI_MAX_ATTEMPTS = 5
-GEMINI_RETRY_DELAYS_SECONDS = [15, 45, 90, 120, 150]
-
-
-def _is_transient_gemini_error(exc: Exception) -> bool:
-    """Best-effort detection for retryable Gemini/API failures and socket/network transient drops."""
-    message = str(exc).lower()
-    retry_markers = [
-        "429",
-        "quota",
-        "rate limit",
-        "rate-limit",
-        "resource_exhausted",
-        "too many requests",
-        "timeout",
-        "timed out",
-        "temporarily unavailable",
-        "unavailable",
-        "503",
-        "502",
-        "500",
-        "504",
-        "getaddrinfo",
-        "connection",
-        "socket",
-        "dns",
-        "network",
-        "unreachable",
-    ]
-    return any(marker in message for marker in retry_markers)
-
-
-def generate_content_with_fallback(
-    prompt: str,
-    response_schema: Any,
-    primary_model: str,
-    fallback_model: Optional[str] = None,
-    temperature: float = 0.2
-) -> Any:
-    """
-    Executes content generation using the primary model.
-    Falls back immediately to fallback_model on a quota error (429) or validation failure,
-    then retries with exponential backoff on subsequent failures.
-    """
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    current_model = primary_model
-    last_error = None
-    
-    for attempt in range(1, GEMINI_MAX_ATTEMPTS + 1):
-        try:
-            logger.info(f"Generating content with model '{current_model}' (attempt {attempt}/{GEMINI_MAX_ATTEMPTS})...")
-            
-            response = client.models.generate_content(
-                model=current_model,
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    response_schema=response_schema,
-                    temperature=temperature
-                )
-            )
-            
-            raw_response_text = response.text
-            if not raw_response_text:
-                raise ValueError("Received an empty response from Gemini API.")
-                
-            # Attempt to parse/validate the schema
-            validated_data = response_schema.model_validate_json(raw_response_text)
-            logger.info(f"Successfully generated and validated content with model '{current_model}'.")
-            return validated_data
-            
-        except Exception as e:
-            last_error = e
-            error_msg = str(e)
-            
-            is_quota_error = "429" in error_msg or "quota" in error_msg.lower() or "rate limit" in error_msg.lower() or "resource_exhausted" in error_msg.lower() or "too many requests" in error_msg.lower()
-            
-            is_validation_error = isinstance(e, ValidationError) or isinstance(e, ValueError) or "validation" in error_msg.lower() or "json" in error_msg.lower()
-            
-            logger.warning(
-                f"Error during generation (model='{current_model}', attempt={attempt}): {error_msg}. "
-                f"Type: {'Quota' if is_quota_error else 'Validation' if is_validation_error else 'Other'}."
-            )
-            
-            # Switch immediately to fallback model if any exception occurs, and fallback model is available and not already active
-            if fallback_model and current_model != fallback_model:
-                logger.warning(
-                    f"Error during generation (model='{current_model}'): {error_msg}. "
-                    f"Switching immediately to fallback model '{fallback_model}'."
-                )
-                current_model = fallback_model
-                # Retry immediately in next loop iteration without sleeping
-                continue
-                
-            # Otherwise apply retry backoff if transient/validation/quota and attempts remain
-            is_retryable = is_quota_error or is_validation_error or _is_transient_gemini_error(e)
-            if is_retryable and attempt < GEMINI_MAX_ATTEMPTS:
-                delay = GEMINI_RETRY_DELAYS_SECONDS[attempt - 1]
-                logger.info(f"Retrying with model '{current_model}' after a delay of {delay}s...")
-                time.sleep(delay)
-                continue
-            else:
-                logger.error(f"Permanent generation failure on attempt {attempt} using model '{current_model}': {error_msg}")
-                raise e
-                
-    raise RuntimeError(f"Generation failed after {GEMINI_MAX_ATTEMPTS} attempts. Last error: {str(last_error)}")
+from app.services.gemini_router import generate_content_with_routing
 
 
 def clean_study_notes(raw_text: str) -> dict:
@@ -165,11 +59,11 @@ INSTRUCTIONS FOR GENERATION:
 Return a structured JSON output conforming to the StudyPack schema.
 """
     try:
-        study_pack = generate_content_with_fallback(
+        study_pack = generate_content_with_routing(
             prompt=prompt,
             response_schema=StudyPack,
-            primary_model=settings.STUDY_PACK_MODEL,
-            fallback_model=settings.STUDY_PACK_FALLBACK_MODEL,
+            models=settings.STUDY_PACK_MODELS,
+            pipeline_name="STUDY_PACK",
             temperature=0.2
         )
         return study_pack.model_dump()
@@ -183,8 +77,7 @@ def _solve_question_batch(
     batch_questions: List[dict],
     batch_idx: int,
     total_batches: int,
-    primary_model: str,
-    fallback_model: Optional[str] = None
+    models: List[str]
 ) -> List[dict]:
     """
     Solves a single batch of questions. Automatically handles context compression for the batch.
@@ -253,11 +146,11 @@ CRITICAL SOLVING & DOMAIN KNOWLEDGE EXTENSION RULES:
 
 Return a structured JSON output conforming to the AnswerPack schema containing the list of SolvedQuestion.
 """
-    answer_pack = generate_content_with_fallback(
+    answer_pack = generate_content_with_routing(
         prompt=prompt,
         response_schema=AnswerPack,
-        primary_model=primary_model,
-        fallback_model=fallback_model,
+        models=models,
+        pipeline_name="ANSWER_PACK",
         temperature=0.2
     )
     return [q.model_dump() for q in answer_pack.questions]
@@ -299,8 +192,7 @@ def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> di
                 batch_questions=current_batch,
                 batch_idx=batch_counter,
                 total_batches=total_batches_remaining,
-                primary_model=settings.ANSWER_PACK_MODEL,
-                fallback_model=settings.ANSWER_PACK_FALLBACK_MODEL
+                models=settings.ANSWER_PACK_MODELS
             )
             all_solved_questions.extend(solved_questions)
             

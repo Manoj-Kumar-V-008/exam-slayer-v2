@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 from app.config import settings
 from app.utils.logger import logger
-from app.services.ai import generate_content_with_fallback
+from app.services.gemini_router import generate_content_with_routing
 
 class ParsedQuestion(BaseModel):
     question_number: str = Field(..., description="The numbering or label of the question, e.g., 'Question 1', 'Question 2(a)'.")
@@ -76,11 +76,11 @@ RAW QUESTION BANK TEXT:
 """
 
     try:
-        parsed_data = generate_content_with_fallback(
+        parsed_data = generate_content_with_routing(
             prompt=prompt,
             response_schema=ParsedQuestionList,
-            primary_model=settings.QUESTION_PARSER_MODEL,
-            fallback_model=settings.QUESTION_PARSER_FALLBACK_MODEL,
+            models=settings.QUESTION_PARSER_MODELS,
+            pipeline_name="QUESTION_PARSER",
             temperature=0.1
         )
         logger.info(f"Successfully extracted {len(parsed_data.questions)} questions from question bank.")

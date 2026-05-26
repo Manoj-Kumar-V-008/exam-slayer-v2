@@ -38,9 +38,9 @@ def run_test():
     settings.ASSETS_DIR.mkdir(parents=True, exist_ok=True)
     
     print("\n--- TEST 1: Normal Run (Primary models: Flash Lite) ---")
-    print(f"QUESTION_PARSER_MODEL: {settings.QUESTION_PARSER_MODEL}")
-    print(f"ANSWER_PACK_MODEL: {settings.ANSWER_PACK_MODEL}")
-    print(f"STUDY_PACK_MODEL: {settings.STUDY_PACK_MODEL}")
+    print(f"QUESTION_PARSER_MODELS: {settings.QUESTION_PARSER_MODELS}")
+    print(f"ANSWER_PACK_MODELS: {settings.ANSWER_PACK_MODELS}")
+    print(f"STUDY_PACK_MODELS: {settings.STUDY_PACK_MODELS}")
     print(f"ANSWER_PACK_BATCH_SIZE: {settings.ANSWER_PACK_BATCH_SIZE}")
     print(f"MAX_ANSWER_PACK_CONTEXT_CHARS: {settings.MAX_ANSWER_PACK_CONTEXT_CHARS}")
     
@@ -70,11 +70,11 @@ def run_test():
         sys.exit(1)
         
     print("\n--- TEST 2: Fallback Run (Mocking primary model failure) ---")
-    # Temporarily set primary answer pack model to an invalid name to force fallback to gemini-2.5-flash
-    original_model = settings.ANSWER_PACK_MODEL
-    settings.ANSWER_PACK_MODEL = "gemini-invalid-model-name-mock"
-    print(f"Set ANSWER_PACK_MODEL = '{settings.ANSWER_PACK_MODEL}' (forcing failure)")
-    print(f"Set ANSWER_PACK_FALLBACK_MODEL = '{settings.ANSWER_PACK_FALLBACK_MODEL}' (expected recovery)")
+    # Temporarily set ANSWER_PACK_MODELS to force routing through invalid model first, then to gemini-2.5-flash
+    original_models = settings.ANSWER_PACK_MODELS
+    settings.ANSWER_PACK_MODELS = ["gemini-invalid-model-name-mock", "gemini-2.5-flash"]
+    print(f"Set ANSWER_PACK_MODELS = {settings.ANSWER_PACK_MODELS} (forcing invalid model fallback)")
+    print("This will verify that the routing utility automatically switches to the valid fallback model.")
     
     fallback_job_id = str(uuid.uuid4())
     jobs_db[fallback_job_id] = {
@@ -107,7 +107,7 @@ def run_test():
         sys.exit(1)
     finally:
         # Restore settings
-        settings.ANSWER_PACK_MODEL = original_model
+        settings.ANSWER_PACK_MODELS = original_models
         
     print("\n=== ALL E2E VERIFICATION TESTS PASSED SUCCESSFULLY ===")
 

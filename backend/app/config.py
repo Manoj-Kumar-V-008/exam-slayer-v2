@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from typing import Set
+from typing import Set, Any
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Base directory of the backend (i.e. exam-slayer-v2/backend)
@@ -14,14 +15,49 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     DEBUG: bool = True
     
-    # Gemini Model and Routing Configs
-    QUESTION_PARSER_MODEL: str = "gemini-2.5-flash-lite"
-    STUDY_PACK_MODEL: str = "gemini-2.5-flash"
-    ANSWER_PACK_MODEL: str = "gemini-2.5-flash-lite"
+    # Gemini Model and Routing Configs (ordered prioritised lists)
+    QUESTION_PARSER_MODELS: list[str] = [
+        "gemini-3.1-flash-lite",
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash-lite"
+    ]
+    ANSWER_PACK_MODELS: list[str] = [
+        "gemini-3.1-flash-lite",
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash",
+        "gemini-3.5-flash",
+        "gemini-2.5-flash-lite"
+    ]
+    STUDY_PACK_MODELS: list[str] = [
+        "gemini-3.5-flash",
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash-lite"
+    ]
 
-    QUESTION_PARSER_FALLBACK_MODEL: str = "gemini-2.5-flash"
-    STUDY_PACK_FALLBACK_MODEL: str = "gemini-2.5-flash-lite"
-    ANSWER_PACK_FALLBACK_MODEL: str = "gemini-2.5-flash"
+    @field_validator("QUESTION_PARSER_MODELS", "ANSWER_PACK_MODELS", "STUDY_PACK_MODELS", mode="before")
+    @classmethod
+    def validate_model_list(cls, v: Any) -> list[str]:
+        import json
+        if isinstance(v, list):
+            return [str(item).strip() for item in v if item]
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return []
+            # Try JSON array parsing first
+            if v.startswith('[') and v.endswith(']'):
+                try:
+                    parsed = json.loads(v)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if item]
+                except Exception:
+                    pass
+            # Fallback to comma-separated values
+            return [item.strip() for item in v.split(',') if item.strip()]
+        return []
+
 
     # Batching and Context Limits
     ANSWER_PACK_BATCH_SIZE: int = 5
