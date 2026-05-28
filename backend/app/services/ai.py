@@ -96,8 +96,9 @@ def _solve_question_batch(
         q_num = pq.get("question_number", f"Question {idx + 1}")
         q_text = pq.get("question_text", "")
         q_marks = pq.get("likely_marks") or "Unknown"
-        q_type = pq.get("question_type") or "theory"
-        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Type: {q_type} | Text: {q_text}\n"
+        q_dominant = pq.get("dominant_intent") or "theory"
+        q_sub_intents = pq.get("sub_intents") or []
+        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Dominant Intent: {q_dominant} | Sub-Intents: {q_sub_intents} | Text: {q_text}\n"
 
     prompt = f"""
 You are an expert AI Solved Answer Pack Compiler.
@@ -110,48 +111,55 @@ The target output is a set of premium, university-exam model answers designed to
 === TARGET QUESTIONS TO SOLVE IN THIS BATCH ===
 {questions_list_str}
 
-CRITICAL RULES FOR MARKS-AWARE ANSWER DEPTH & QUESTION TYPE FORMATTING:
+CRITICAL RULES FOR MARKS-AWARE ANSWER DEPTH, DOMINANT INTENT & SUB-INTENT COMPOSITION:
 1. STRICT WORD LIMITS PER QUESTION (For the 'answer' field):
    - You MUST satisfy these word counts for every single question. Writing too short answers is a severe failure.
    - 2 Marks: 80–150 words. Direct answer only.
-   - 5 Marks: 200–350 words. Structured explanation + brief example.
-   - 10 Marks: 450–800 words. Deep, highly detailed, exam-ready response. You must expand the concepts comprehensively, explain all relevant parts, give clear step-by-step processes or schema diagrams, add code/queries if applicable, compare alternatives, and write a thorough, deep, university-level answer. Do not write short summaries or brief outlines.
-   - NOTE: Since the provided study notes may be brief summary pointers, you MUST expand the answers using your own deep academic domain knowledge to meet these word limits. If you write less than 450 words for a 10 Marks question or less than 200 words for a 5 Marks question, it will fail validation. You have plenty of output token space because this batch contains limited questions. Use it to write a comprehensive, long, detailed response.
+   - 5 Marks: 200–350 words.
+   - 10 Marks: 450–800 words. Deep, highly detailed, exam-ready response. You must expand the concepts comprehensively, explain all relevant parts, give clear step-by-step processes, compare alternatives, and write a thorough, deep, university-level answer. 
+   - NOTE: Since the provided study notes may be brief summary pointers, you MUST expand the answers using your own deep academic domain knowledge to meet these word limits. If you write less than 450 words for a 10 Marks question or less than 200 words for a 5 Marks question, it will fail validation. You have plenty of output token space because this batch contains limited questions. Use it to write a comprehensive, long, detailed response. Inject extensive academic background, background explanations, examples, and details to guarantee reaching the 450+ word minimum.
    - If the marks category is "Unknown" or missing in the target list, infer the marks based on complexity (e.g., direct definitions -> 2 marks, comparisons/explanations -> 5 marks, design/complex analysis/SQL schema queries -> 10 marks) and apply the correct word limits.
 
-2. FORMATTING RULES BY QUESTION TYPE (For the 'answer' field):
-   - 'theory': Must contain:
-     - Introduction: Concise definition/context.
-     - Explanation: Multi-layered structured explanation of concepts.
-     - Examples: Real-world or academic examples.
-     - Comparisons: (If relevant) comparative analysis.
-     - Mnemonic: Memory hook/acronym.
-     - Quick Revision Summary: Key takeaway bullets.
-   - 'sql': Directly output query blocks using markdown (```sql ... ```). Follow with line-by-line mechanical explanation and column meanings. Strictly avoid conversational chatbot-style filler.
-   - 'relational_algebra': Output formal algebraic expressions. Provide operator breakdowns.
-   - 'er_model': Output relational schema attributes (underlined PK, italic FK), key constraints, mapping steps, and details.
-   - 'definition': Concise, clear, high-scoring academic definition.
-   - 'comparison': Must render a clean markdown table comparing key metrics. Do not use plain text lists.
-   - 'problem_solving': Clear step-by-step mathematical/procedural solution.
-   - 'mixed': Combine query blocks and step-by-step structured theory as appropriate.
+2. ADAPTIVE COMPOSITION BY DOMINANT INTENT & SUB-INTENTS (For the 'answer' field):
+   - Each question has a `Dominant Intent` and a list of `Sub-Intents`. You must build the final answer compositionally by sequentially addressing the tasks described in the `Sub-Intents` in a clean, logical flow.
+   - The `Dominant Intent` represents the primary focus of the question. It MUST control the largest portion of the answer allocation, the primary formatting style, and the overall answer emphasis.
+   - You must strictly apply the following formatting rules when a specific sub-intent is present in the `Sub-Intents` list:
+     - **CRITICAL SQL RULE**: If 'SQL' is the dominant intent or is in the sub-intents list, you MUST start the 'answer' field IMMEDIATELY with the SQL code block (```sql ... ```). Do NOT write any introduction, context, or conversational text before the code block. Start with the query directly, then write the detailed line explanation, column meaning, etc.
+     - If 'definition': Begin with a concise, academic definition.
+     - If 'comparison': Render a clean markdown comparison table. Do not use plain text lists.
+     - If 'example': Include a concrete example, database schema, or code snippet.
+     - If 'relational_algebra': Output formal algebraic expressions followed by operator breakdown.
+     - If 'ER_mapping': Output relational schema attributes (underlined PK, italic FK), key constraints, and mapping details.
+     - If 'schema_design': Design database tables/schemas and constraints.
+     - If 'steps': Use a numbered procedural structure for step-by-step explanation.
+     - If 'advantages' or 'disadvantages': Use bulleted sections comparing pros/cons.
+     - If 'trigger/code': Generate proper code blocks followed by explanation.
+     - If 'problem_solving': Use clear step-by-step reasoning or mathematical/algorithmic steps.
+     - If 'diagram': Provide a detailed structured textual explanation of the diagram's components, layout, and connections. Do NOT generate ugly ASCII drawings/diagrams.
+     - If 'explanation': Provide a multi-layered structured conceptual explanation.
+   - Ensure the compositional answer is unified and reads as a single, coherent, exam-scoring optimized answer. Do not split the output into multiple separate question objects.
 
-3. UNIVERSITY-GRADE QUALITY & STYLE:
+3. PRESERVE BOUNDARIES:
+   - You must return exactly one output question in the 'questions' list for each item in the input batch list. You must NOT merge questions or split them.
+
+4. UNIVERSITY-GRADE QUALITY & STYLE:
    - Target a formal, academic, clear, teacher-friendly, university exam scoring-oriented tone.
    - Strictly avoid chatbot-style dialogue, conversational filler (e.g., "Sure, here is the answer", "In this section we will discuss"), and introductory/concluding remarks.
    - Use precise technical terminology. Bold key terms when first defined.
    - Wrap all code, schemas, and queries in proper markdown blocks.
 
-4. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
+5. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
    - Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth.
    - Priority 2 (No Coverage / Missing Notes): If the study notes are insufficient or lack coverage of a question, you must fall back to your general model knowledge silently and seamlessly.
    - **CRITICAL**: Do NOT append any footnotes, notices, or warning disclaimers like "*(Note: Extended beyond uploaded notes.)*" under any circumstances. Proceed silently and seamlessly.
 
-5. SCHEMA FIELD STRUCTURE:
+6. SCHEMA FIELD STRUCTURE:
    Conform to the AnswerPack schema and provide these fields for each question:
    - `question_number`: Exactly as given in target list.
    - `question_text`: Exactly as given in target list.
    - `marks_category`: "2 Marks", "5 Marks", or "10 Marks" (inferred or explicit).
-   - `question_type`: Exactly as given in target list.
+   - `dominant_intent`: Exactly as given in target list.
+   - `sub_intents`: Exactly as given in target list.
    - `answer`: The exam-ready solution conforming strictly to the word limits, formatting, and markdown rules above.
    - `simple_explanation`: A very brief (max 50 words) intuitive plain-English analogy.
    - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing the key takeaways.

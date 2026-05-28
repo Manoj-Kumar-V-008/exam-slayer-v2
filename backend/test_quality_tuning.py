@@ -78,12 +78,12 @@ def run_quality_tuning_validation():
         for i, q in enumerate(questions, 1):
             q_num = q.get("question_number", f"Unknown {i}")
             q_text = q.get("question_text", "")
-            q_type = q.get("question_type", "None")
+            q_dominant = q.get("dominant_intent", "None")
             q_marks = q.get("marks_category", "None")
             answer = q.get("answer", "")
             word_count = count_words(answer)
             
-            print(f"\n--- Question {i}: {q_num} [{q_marks}] ({q_type}) ---")
+            print(f"\n--- Question {i}: {q_num} [{q_marks}] ({q_dominant}) ---")
             print(f"Text: {q_text[:100]}...")
             print(f"Answer length: {word_count} words")
             
@@ -106,10 +106,10 @@ def run_quality_tuning_validation():
                     errors.append(f"Question {q_num} (10 Marks) has {word_count} words (Expected 450-800).")
                     
             # Type-specific checks
-            if q_type == "sql":
+            if q_dominant == "sql":
                 if "```sql" not in answer.lower():
                     errors.append(f"Question {q_num} (SQL) answer is not SQL-shaped (missing ```sql code block).")
-            elif q_type == "comparison":
+            elif q_dominant == "comparison":
                 if "|" not in answer:
                     errors.append(f"Question {q_num} (comparison) answer does not contain a markdown table.")
                     

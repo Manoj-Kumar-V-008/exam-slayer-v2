@@ -13,7 +13,8 @@ class ParsedQuestion(BaseModel):
     question_number: str = Field(..., description="The numbering or label of the question, e.g., 'Question 1', 'Question 2(a)'.")
     question_text: str = Field(..., description="The full wording of the question.")
     likely_marks: Optional[str] = Field(None, description="The estimated or explicit marks category, e.g. '2 Marks', '5 Marks', '10 Marks'.")
-    question_type: str = Field(..., description="The classified type of the question: 'theory', 'definition', 'sql', 'relational_algebra', 'er_model', 'comparison', 'problem_solving', 'mixed'.")
+    dominant_intent: str = Field(..., description="The dominant intent (primary focus) of the question: 'theory', 'definition', 'sql', 'relational_algebra', 'er_model', 'comparison', 'problem_solving'.")
+    sub_intents: List[str] = Field(default_factory=list, description="A list of all sub-intents detected in the question. Supported sub-intents: 'definition', 'explanation', 'comparison', 'example', 'SQL', 'relational_algebra', 'ER_mapping', 'schema_design', 'steps', 'advantages', 'disadvantages', 'trigger/code', 'problem_solving', 'diagram'.")
 
 class ParsedQuestionList(BaseModel):
     questions: List[ParsedQuestion] = Field(..., description="The list of parsed questions.")
@@ -148,8 +149,24 @@ CRITICAL PARSING RULES:
 6. Extract/Infer Marks:
    - Look for explicit marks indications in the text (e.g., "[10 marks]", "(5m)", "2 marks"). Keep clean text like "2 Marks", "5 Marks", "10 Marks".
    - If marks are not explicitly stated, infer the weight based on the question length, complexity, and verbs used.
-7. Classify Question Type:
-   - Classify the question into one of the following types: 'theory', 'definition', 'sql', 'relational_algebra', 'er_model', 'comparison', 'problem_solving', 'mixed'.
+7. Classify Dominant Intent & Detect Sub-Intents:
+   - Classify the question's primary focus as `dominant_intent`. It must be one of: 'theory', 'definition', 'sql', 'relational_algebra', 'er_model', 'comparison', 'problem_solving'.
+   - Identify all sub-intents contained in the question and list them in `sub_intents`.
+     Supported sub-intents:
+     - 'definition': defining terms or concepts.
+     - 'explanation': explaining concepts or theories in detail.
+     - 'comparison': comparing or contrasting different concepts.
+     - 'example': providing examples, illustrations, or schemas.
+     - 'SQL': writing SQL queries, triggers, or DDL/DML.
+     - 'relational_algebra': writing relational algebra expressions.
+     - 'ER_mapping': mapping ER diagram to relational tables, detailing PK/FK.
+     - 'schema_design': designing database schemas or tables.
+     - 'steps': explaining procedural steps or algorithms.
+     - 'advantages': discussing pros, benefits, or advantages.
+     - 'disadvantages': discussing cons, limitations, or disadvantages.
+     - 'trigger/code': writing triggers, stored procedures, or general code.
+     - 'problem_solving': step-by-step logic, math, normalization.
+     - 'diagram': describing diagram components or structures (textual description only).
 8. NO DEDUPLICATION:
    - Do NOT consolidate, group, or merge distinct numbered questions. Every numbered question must correspond to exactly one output.
 
@@ -167,15 +184,31 @@ CRITICAL RULES:
 2. NO MERGING OR SPLITTING: Do NOT merge adjacent question blocks, even if they are semantically similar. Do NOT split a candidate question block into multiple questions. Boundary modifications are strictly forbidden.
 3. NORMALIZE TEXT: Clean up OCR errors, spelling mistakes, and formatting. Do not change the academic meaning of the question. Keep all subparts, options, tables, or code schemas inside the question text.
 4. EXTRACT/INFER MARKS: Identify explicit marks (e.g. "[10 marks]", "5m", "2 Marks"). If marks are not explicitly stated, infer the weight based on the question wording and complexity. Output clean marks like "2 Marks", "5 Marks", "10 Marks".
-5. CLASSIFY QUESTION TYPE: Classify the question into one of the following types:
-   - 'theory': Conceptual questions requiring descriptive explanations.
-   - 'definition': Brief definition of terms.
-   - 'sql': Database query writing or SQL schema definitions.
-   - 'relational_algebra': Relational algebra queries or expressions.
-   - 'er_model': ER diagram descriptions, conversion to tables, schema mapping.
-   - 'comparison': Differentiating or comparing two or more concepts.
-   - 'problem_solving': Step-by-step math, normal form normalization, or algorithmic solving.
-   - 'mixed': Questions containing a mixture of the above (e.g. part theory, part SQL query).
+5. CLASSIFY DOMINANT INTENT & DETECT SUB-INTENTS:
+   - Classify the question's primary focus as `dominant_intent`. It must be one of:
+     - 'theory': Conceptual questions requiring descriptive explanations.
+     - 'definition': Brief definition of terms.
+     - 'sql': Database query writing or SQL schema definitions.
+     - 'relational_algebra': Relational algebra queries or expressions.
+     - 'er_model': ER diagram descriptions, conversion to tables, schema mapping.
+     - 'comparison': Differentiating or comparing two or more concepts.
+     - 'problem_solving': Step-by-step math, normal form normalization, or algorithmic solving.
+   - Detect all tasks/subparts inside the question and list them in `sub_intents`.
+     Supported sub-intents:
+     - 'definition': defining terms or concepts.
+     - 'explanation': explaining concepts or theories in detail.
+     - 'comparison': comparing or contrasting different concepts.
+     - 'example': providing examples, illustrations, or schemas.
+     - 'SQL': writing SQL queries, triggers, or DDL/DML.
+     - 'relational_algebra': writing relational algebra expressions.
+     - 'ER_mapping': mapping ER diagram to relational tables, detailing PK/FK.
+     - 'schema_design': designing database schemas or tables.
+     - 'steps': explaining procedural steps or algorithms.
+     - 'advantages': discussing pros, benefits, or advantages.
+     - 'disadvantages': discussing cons, limitations, or disadvantages.
+     - 'trigger/code': writing triggers, stored procedures, or general code.
+     - 'problem_solving': step-by-step logic, math, normalization.
+     - 'diagram': describing diagram components or structures (textual description only).
 
 CANDIDATE QUESTION BLOCKS TO PROCESS:
 {json.dumps(candidates, indent=2)}
