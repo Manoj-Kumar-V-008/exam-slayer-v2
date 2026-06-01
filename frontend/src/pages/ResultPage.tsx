@@ -9,6 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { getJobStatus, JobResponse, API_BASE_URL, SolvedQuestion, StudyPackSection } from "@/services/api";
 import { Navbar } from "@/components/Navbar";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export function ResultPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -154,19 +156,73 @@ export function ResultPage() {
   // Simple Markdown formatter helper
   const renderSimpleMarkdown = (text: string) => {
     if (!text) return null;
-    return text.split(/\n\n+/).map((para, i) => {
-      const parts = para.split(/(\*\*.*?\*\*)/g);
-      return (
-        <p key={i} className="mb-3 last:mb-0 leading-relaxed text-muted-foreground text-sm select-text">
-          {parts.map((part, j) => {
-            if (part.startsWith("**") && part.endsWith("**")) {
-              return <strong key={j} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>;
-            }
-            return part;
-          })}
-        </p>
-      );
-    });
+    return (
+      <div className="prose dark:prose-invert max-w-none text-muted-foreground text-sm select-text leading-relaxed">
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
+            h1: ({node, ...props}) => <h1 className="text-base font-bold text-foreground mt-6 mb-3 border-b border-border/40 pb-1" {...props} />,
+            h2: ({node, ...props}) => <h2 className="text-sm font-bold text-foreground mt-5 mb-2.5" {...props} />,
+            h3: ({node, ...props}) => <h3 className="text-xs font-bold text-foreground mt-4 mb-2" {...props} />,
+            h4: ({node, ...props}) => <h4 className="text-[11px] font-bold text-foreground uppercase tracking-wider font-mono mt-3 mb-1.5" {...props} />,
+            p: ({node, ...props}) => <p className="mb-3.5 leading-relaxed text-muted-foreground" {...props} />,
+            ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-3.5 space-y-1.5" {...props} />,
+            ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-3.5 space-y-1.5" {...props} />,
+            li: ({node, ...props}) => <li className="text-muted-foreground" {...props} />,
+            blockquote: ({node, ...props}) => (
+              <blockquote className="border-l-4 border-primary/30 pl-4 py-1 my-3 bg-muted/20 rounded-r-md text-xs italic" {...props} />
+            ),
+            code({node, inline, className, children, ...props}: any) {
+              const match = /language-(\w+)/.exec(className || '');
+              return !inline ? (
+                <div className="relative my-4 group">
+                  <div className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
+                      }}
+                      className="h-7 w-7 p-0 bg-background/50 hover:bg-background border border-border"
+                      title="Copy code"
+                    >
+                      <Copy className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </div>
+                  {match && (
+                    <span className="absolute left-4 -top-2 px-2 py-0.5 rounded bg-primary/10 border border-primary/20 text-[10px] font-mono font-bold text-primary uppercase select-none">
+                      {match[1]}
+                    </span>
+                  )}
+                  <pre className="overflow-x-auto p-4 rounded-lg bg-slate-950 dark:bg-slate-900/60 border border-border font-mono text-xs text-slate-100 leading-relaxed max-h-[300px]">
+                    <code className={className} {...props}>
+                      {children}
+                    </code>
+                  </pre>
+                </div>
+              ) : (
+                <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs text-rose-500 dark:text-rose-400 font-semibold" {...props}>
+                  {children}
+                </code>
+              );
+            },
+            table: ({node, ...props}) => (
+              <div className="overflow-x-auto my-5 rounded-lg border border-border/80 shadow-sm bg-card/30">
+                <table className="min-w-full divide-y divide-border/60 text-xs border-collapse" {...props} />
+              </div>
+            ),
+            thead: ({node, ...props}) => <thead className="bg-muted/40 font-mono text-[10px] uppercase tracking-wider text-foreground/80" {...props} />,
+            tbody: ({node, ...props}) => <tbody className="divide-y divide-border/40 bg-transparent" {...props} />,
+            tr: ({node, ...props}) => <tr className="hover:bg-muted/10 transition-colors" {...props} />,
+            th: ({node, ...props}) => <th className="px-4 py-3 text-left font-bold border-r border-border/40 last:border-r-0" {...props} />,
+            td: ({node, ...props}) => <td className="px-4 py-2.5 text-muted-foreground border-r border-border/40 last:border-r-0 select-text" {...props} />,
+          }}
+        >
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
   };
 
   const getMarksBadgeClass = (marks: string | null | undefined) => {

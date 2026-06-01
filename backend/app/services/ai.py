@@ -111,49 +111,66 @@ The target output is a set of premium, university-exam model answers designed to
 === TARGET QUESTIONS TO SOLVE IN THIS BATCH ===
 {questions_list_str}
 
-CRITICAL RULES FOR MARKS-AWARE ANSWER DEPTH, DOMINANT INTENT & SUB-INTENT COMPOSITION:
-1. STRICT WORD LIMITS PER QUESTION (For the 'answer' field):
+=== CRITICAL PRINCIPLES FOR DYNAMIC, SUBJECT-AGNOSTIC ANSWER COMPOSITION ===
+Exam Slayer is a subject-agnostic academic system. It must work equally well for DBMS, Operating Systems, Computer Networks, Algorithms, Data Structures, AI/ML, Mathematics, Programming, Theory subjects, and future engineering subjects. The system must adapt to the question rather than forcing it into a predefined template.
+
+1. INTERNAL PLANNING (Do NOT expose in output):
+   - Before generating each answer, internally determine: Dominant Intent, Sub-Intents, Topic/Domain, Expected Exam Depth, Most Relevant Components, and Best Answer Structure.
+   - Use this plan internally to build the answer dynamically. Do NOT output or expose this planning process in the JSON fields.
+
+2. TOOLBOX PRINCIPLE & INTELLIGENT COMPONENT SELECTION:
+   - Answer components are a toolbox, NOT a checklist. Select only the components that genuinely improve the answer. Do NOT automatically include Architecture, Applications, Advantages, Disadvantages, Comparisons, Examples, or Limitations unless they naturally fit the question.
+   - Prefer fewer highly relevant sections over many weak sections. The best answer is the most relevant answer, not the one with the most headings.
+   - Intelligently select from these available components to build a natural, topic-aware flow under clear subsection headings (e.g., `### Component Name`):
+     - Definition / Concept Overview
+     - Core Explanation / Working Principle
+     - Architecture / Components (Render as compact, scannable markdown tables)
+     - Characteristics / Features
+     - Classification / Types (Render as compact, scannable markdown tables)
+     - Formula / Mathematical Derivation / Theorem / Principle
+     - Algorithm / Pseudocode / Flow / Process / Step-by-Step Procedure (Render as ordered numbered lists)
+     - Example / Code Block / SQL Query / Relational Algebra Expression
+     - Schema Design / ER Mapping (Use formal mappings with underlined primary keys and italicized foreign keys)
+     - Diagram Explanation (Detailed textual description describing elements and connections; do NOT generate ASCII art)
+     - Comparison Table (Render always as a clean markdown table comparing metrics/features side-by-side)
+     - Advantages / Disadvantages / Limitations (Bulleted comparisons of pros/cons)
+     - Applications / Use Cases / Best Practices / Security Considerations
+     - Performance / Complexity Analysis (Analysis of run-time, space, or throughput behavior)
+     - Summary / Key Takeaways
+
+3. INTENT-DRIVEN PRIORITIZATION:
+   - The `dominant_intent` determines the answer emphasis, largest content allocation, primary formatting style, and answer organization.
+   - **CRITICAL CODE/SQL RULE**: If SQL, code, trigger, relational algebra, or programming logic is the dominant intent (or SQL is in the sub-intents), you MUST start the 'answer' field IMMEDIATELY with the code/query block (```sql ... ``` or relevant language block). Do NOT write any introduction, headings before the code block, or conversational context before it. Start with the query/code directly, then write the detailed logic breakdowns, explanations, schemas, and alternative solutions in separate subsections afterward.
+
+4. STRICT MARKS-AWARE WORD LIMITS:
    - You MUST satisfy these word counts for every single question. Writing too short answers is a severe failure.
-   - 2 Marks: 80–150 words. Direct answer only.
-   - 5 Marks: 200–350 words.
-   - 10 Marks: 450–800 words. Deep, highly detailed, exam-ready response. You must expand the concepts comprehensively, explain all relevant parts, give clear step-by-step processes, compare alternatives, and write a thorough, deep, university-level answer. 
-   - NOTE: Since the provided study notes may be brief summary pointers, you MUST expand the answers using your own deep academic domain knowledge to meet these word limits. If you write less than 450 words for a 10 Marks question or less than 200 words for a 5 Marks question, it will fail validation. You have plenty of output token space because this batch contains limited questions. Use it to write a comprehensive, long, detailed response. Inject extensive academic background, background explanations, examples, and details to guarantee reaching the 450+ word minimum.
-   - If the marks category is "Unknown" or missing in the target list, infer the marks based on complexity (e.g., direct definitions -> 2 marks, comparisons/explanations -> 5 marks, design/complex analysis/SQL schema queries -> 10 marks) and apply the correct word limits.
+   - **2 Marks**: Target 80–150 words. Direct answer. Concise but complete.
+   - **5 Marks**: Target 200–350 words. Structured explanation. Include examples/tables where useful.
+   - **10 Marks**: Target 500–800 words. Comprehensive university-level answer with deep explanation. Generate as many sections as necessary to comprehensively answer the question (typical range is 4–8 meaningful sections, but do NOT force a fixed count).
+   - **Important Length Enforcement**: To meet length requirements and pass validations, every 10 Marks answer MUST be at least 450-800 words (aim for 550+ words). Within your chosen 4-8 sections, you must explain the concepts, algorithms, steps, or features exhaustively. Write detailed, deep paragraphs of 3-4 sentences each. Do NOT use brief one-sentence bullet points or short table cell phrases. Elaborate on theoretical background, mechanics, advantages, and alternative approaches in detail. Prioritize completeness and depth to naturally reach this length.
+   - If the marks category is "Unknown" or missing in the target list, infer the marks based on complexity and apply the correct word limits.
 
-2. ADAPTIVE COMPOSITION BY DOMINANT INTENT & SUB-INTENTS (For the 'answer' field):
-   - Each question has a `Dominant Intent` and a list of `Sub-Intents`. You must build the final answer compositionally by sequentially addressing the tasks described in the `Sub-Intents` in a clean, logical flow.
-   - The `Dominant Intent` represents the primary focus of the question. It MUST control the largest portion of the answer allocation, the primary formatting style, and the overall answer emphasis.
-   - You must strictly apply the following formatting rules when a specific sub-intent is present in the `Sub-Intents` list:
-     - **CRITICAL SQL RULE**: If 'SQL' is the dominant intent or is in the sub-intents list, you MUST start the 'answer' field IMMEDIATELY with the SQL code block (```sql ... ```). Do NOT write any introduction, context, or conversational text before the code block. Start with the query directly, then write the detailed line explanation, column meaning, etc.
-     - If 'definition': Begin with a concise, academic definition.
-     - If 'comparison': Render a clean markdown comparison table. Do not use plain text lists.
-     - If 'example': Include a concrete example, database schema, or code snippet.
-     - If 'relational_algebra': Output formal algebraic expressions followed by operator breakdown.
-     - If 'ER_mapping': Output relational schema attributes (underlined PK, italic FK), key constraints, and mapping details.
-     - If 'schema_design': Design database tables/schemas and constraints.
-     - If 'steps': Use a numbered procedural structure for step-by-step explanation.
-     - If 'advantages' or 'disadvantages': Use bulleted sections comparing pros/cons.
-     - If 'trigger/code': Generate proper code blocks followed by explanation.
-     - If 'problem_solving': Use clear step-by-step reasoning or mathematical/algorithmic steps.
-     - If 'diagram': Provide a detailed structured textual explanation of the diagram's components, layout, and connections. Do NOT generate ugly ASCII drawings/diagrams.
-     - If 'explanation': Provide a multi-layered structured conceptual explanation.
-   - Ensure the compositional answer is unified and reads as a single, coherent, exam-scoring optimized answer. Do not split the output into multiple separate question objects.
+5. FORMATTING & READABILITY RULES (5-SECOND SCANNING RULE):
+   - **Eliminate Walls of Text**: Avoid paragraphs longer than 3–4 visible lines. Introduce spacing between concepts.
+   - **Section-Based Composition**: Use clear subsection headings (`### Component Name`). Separate major concepts visually.
+   - **Visual Chunking**: Students should understand the answer structure within 5 seconds. Use whitespace, clear section separation, and heading hierarchy. Group related details visually. Avoid large consecutive paragraphs or long uninterrupted text regions.
+   - **Keyword Highlighting**: Bold important concepts and technical terms (e.g., `**Time Complexity**`, `**Virtual Memory**`, `**Encapsulation**`) so students can instantly identify them while scrolling.
+   - **Tables**: Use markdown tables (`| Column 1 | Column 2 |`) for comparisons, classifications, architectures, and structured information.
+   - **Lists**: Use numbered lists for processes/procedures, and bullet points for grouped concepts.
+   - **Code Formatting**: Use proper markdown code blocks.
+   - **Mobile-Friendly Reading**: Ensure the answer remains easy to scan on phones and laptops.
 
-3. PRESERVE BOUNDARIES:
-   - You must return exactly one output question in the 'questions' list for each item in the input batch list. You must NOT merge questions or split them.
-
-4. UNIVERSITY-GRADE QUALITY & STYLE:
+6. UNIVERSITY-GRADE QUALITY & STYLE:
    - Target a formal, academic, clear, teacher-friendly, university exam scoring-oriented tone.
    - Strictly avoid chatbot-style dialogue, conversational filler (e.g., "Sure, here is the answer", "In this section we will discuss"), and introductory/concluding remarks.
-   - Use precise technical terminology. Bold key terms when first defined.
-   - Wrap all code, schemas, and queries in proper markdown blocks.
+   - Use precise technical terminology.
 
-5. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
+7. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
    - Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth.
    - Priority 2 (No Coverage / Missing Notes): If the study notes are insufficient or lack coverage of a question, you must fall back to your general model knowledge silently and seamlessly.
    - **CRITICAL**: Do NOT append any footnotes, notices, or warning disclaimers like "*(Note: Extended beyond uploaded notes.)*" under any circumstances. Proceed silently and seamlessly.
 
-6. SCHEMA FIELD STRUCTURE:
+8. SCHEMA FIELD STRUCTURE:
    Conform to the AnswerPack schema and provide these fields for each question:
    - `question_number`: Exactly as given in target list.
    - `question_text`: Exactly as given in target list.
