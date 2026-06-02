@@ -67,6 +67,7 @@ class JobResponse(BaseModel):
     study_pack: Optional[StudyPack] = None
     answer_pack: Optional[AnswerPack] = None
     pdf_url: Optional[str] = None
+    image_metadata: Optional[List[dict]] = None
     
     # Extraction pipeline metadata
     filename: Optional[str] = None

@@ -127,14 +127,7 @@
         </div>
         {% endif %}
         
-        <!-- Embedded Assets -->
-        {% if section.embedded_assets %}
-            {% for asset in section.embedded_assets %}
-            <div class="image-container">
-                <img class="embedded-image" src="{{ assets_dir_url }}/{{ asset }}" alt="Extracted Graphic">
-            </div>
-            {% endfor %}
-        {% endif %}
+
     </div>
     {% endfor %}
 

@@ -57,6 +57,15 @@ def run_pdf_extraction_pipeline(
         if ocr_used:
             jobs_db[job_id]["ocr_used"] = True
             
+        # Generate image metadata layer
+        from app.services.image_intelligence import generate_image_metadata_layer
+        image_metadata = generate_image_metadata_layer(
+            job_id=job_id,
+            assets=extraction_result["assets"],
+            study_text=extraction_result["study_text"]
+        )
+        jobs_db[job_id]["image_metadata"] = image_metadata
+            
         # 4. Update status to AI_PROCESSING (solving or compiling)
         jobs_db[job_id]["status"] = JobStatus.AI_PROCESSING
         
@@ -92,6 +101,7 @@ def run_pdf_extraction_pipeline(
                 "assets": extraction_result["assets"],
                 "ocr_used": ocr_used,
                 "study_pack": study_pack_data,
+                "image_metadata": image_metadata,
                 "pdf_file": pdf_filename,
                 "pdf_url": f"/api/v1/jobs/download/{job_id}"
             })
@@ -101,12 +111,17 @@ def run_pdf_extraction_pipeline(
             # Parse questions from question bank text
             from app.services.question_parser import parse_questions_from_bank
             parsed_questions = parse_questions_from_bank(extraction_result["qb_text"])
-            logger.info(f"Parsed {len(parsed_questions)} questions from bank. Starting Gemini AI solving...")
+            logger.info(f"Parsed {len(parsed_questions)} questions from bank. Running matching algorithm...")
             
+            # Match images with questions using scoring & ranking rules (Gemini tie-breaker only)
+            from app.services.image_intelligence import match_images_for_questions
+            matched_questions = match_images_for_questions(parsed_questions, image_metadata)
+            
+            logger.info("Image matching complete. Starting Gemini AI solving...")
             # Call Gemini solver passing the study materials text and the parsed questions list
             answer_pack_data = generate_solved_answers(
                 study_text=extraction_result["study_text"],
-                parsed_questions=parsed_questions
+                parsed_questions=matched_questions
             )
             
             # Correct any UUID transcription errors in asset filenames
@@ -135,6 +150,7 @@ def run_pdf_extraction_pipeline(
                 "assets": extraction_result["assets"],
                 "ocr_used": ocr_used,
                 "answer_pack": answer_pack_data,
+                "image_metadata": image_metadata,
                 "pdf_file": pdf_filename,
                 "pdf_url": f"/api/v1/jobs/download/{job_id}"
             })
@@ -277,6 +293,7 @@ async def upload_file(
         "study_pack": None,
         "answer_pack": None,
         "pdf_url": None,
+        "image_metadata": [],
         "extracted_text_length": 0,
         "extracted_asset_count": 0,
         "assets": [],

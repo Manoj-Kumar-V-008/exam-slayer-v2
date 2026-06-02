@@ -98,7 +98,17 @@ def _solve_question_batch(
         q_marks = pq.get("likely_marks") or "Unknown"
         q_dominant = pq.get("dominant_intent") or "theory"
         q_sub_intents = pq.get("sub_intents") or []
-        questions_list_str += f"- {q_num} | Inferred Marks: {q_marks} | Dominant Intent: {q_dominant} | Sub-Intents: {q_sub_intents} | Text: {q_text}\n"
+        
+        q_matched_imgs = pq.get("matched_images", [])
+        if q_matched_imgs:
+            imgs_info = "; ".join([f"{img['filename']} (Caption: '{img['caption']}')" for img in q_matched_imgs])
+        else:
+            imgs_info = "None"
+            
+        questions_list_str += (
+            f"- {q_num} | Inferred Marks: {q_marks} | Dominant Intent: {q_dominant} "
+            f"| Sub-Intents: {q_sub_intents} | Matched Diagrams to Discuss: {imgs_info} | Text: {q_text}\n"
+        )
 
     prompt = f"""
 You are an expert AI Solved Answer Pack Compiler.
@@ -170,7 +180,10 @@ Exam Slayer is a subject-agnostic academic system. It must work equally well for
    - Priority 2 (No Coverage / Missing Notes): If the study notes are insufficient or lack coverage of a question, you must fall back to your general model knowledge silently and seamlessly.
    - **CRITICAL**: Do NOT append any footnotes, notices, or warning disclaimers like "*(Note: Extended beyond uploaded notes.)*" under any circumstances. Proceed silently and seamlessly.
 
-8. SCHEMA FIELD STRUCTURE:
+8. STRICT NO-IMAGE-PLACEHOLDERS RULE:
+   - Do NOT write or output any image placeholders like `{{IMAGE_ASSET:...}}` or HTML image tags in the 'answer' text. The system handles all diagram placement programmatically after you generate the text. If any diagrams are listed in 'Matched Diagrams to Discuss', discuss their concepts and structure textually using their captions, but do not insert the raw image tags.
+
+9. SCHEMA FIELD STRUCTURE:
    Conform to the AnswerPack schema and provide these fields for each question:
    - `question_number`: Exactly as given in target list.
    - `question_text`: Exactly as given in target list.
@@ -181,7 +194,7 @@ Exam Slayer is a subject-agnostic academic system. It must work equally well for
    - `simple_explanation`: A very brief (max 50 words) intuitive plain-English analogy.
    - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing the key takeaways.
    - `memory_trick`: A short (max 12 words) mnemonic or quick association trigger.
-   - `related_assets`: Filename pointers to relevant images in the study materials if any.
+   - `related_assets`: Keep this list empty. The system will populate it programmatically.
 
 Keep Unicode math symbols, subscripts, superscripts, and Greek letters (e.g. λ, θ) intact to preserve formula rendering quality.
 
@@ -279,6 +292,21 @@ def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> di
                 logger.error(f"Single-question batch failed permanently. Cannot split further: {str(e)}")
                 raise e
                 
+    # Post-process: Map matched images back and programmatically place placeholders in answers
+    from app.services.image_intelligence import place_images_in_answer
+    matched_images_map = {q.get("question_number"): q.get("matched_images", []) for q in parsed_questions}
+    
+    for sq in all_solved_questions:
+        q_num = sq.get("question_number")
+        matched_imgs = matched_images_map.get(q_num, [])
+        sq["matched_images"] = matched_imgs
+        # Sync assets lists
+        sq["related_assets"] = [img["filename"] for img in matched_imgs]
+        sq["embedded_assets"] = [img["filename"] for img in matched_imgs]
+        
+        # Inject the placeholders programmatically under the most relevant headings
+        sq["answer"] = place_images_in_answer(sq.get("answer", ""), matched_imgs)
+        
     return {
         "title": final_title,
         "questions": all_solved_questions

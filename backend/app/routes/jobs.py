@@ -57,6 +57,7 @@ async def get_job_status(job_id: str):
         study_pack=job_info.get("study_pack"),
         answer_pack=job_info.get("answer_pack"),
         pdf_url=job_info["pdf_url"],
+        image_metadata=job_info.get("image_metadata"),
         filename=job_info.get("filename"),
         extracted_text_length=job_info.get("extracted_text_length"),
         extracted_asset_count=job_info.get("extracted_asset_count"),
