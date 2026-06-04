@@ -187,6 +187,11 @@ def render_answer_pack_html(answer_pack: dict) -> str:
             ]
             question["quick_revision_points_html"] = [parse_md_inline(item) for item in filtered_items]
             
+        # Parse things_to_remember lists markdown
+        for topic in processed_pack.get("things_to_remember", []) or []:
+            raw_points = topic.get("key_points_to_remember", [])
+            topic["key_points_to_remember_html"] = [parse_md_inline(p) for p in raw_points if p and p.strip()]
+            
         # 5. Load Jinja2 environment and render HTML
         env = Environment(loader=FileSystemLoader(str(settings.TEMPLATES_DIR)))
         template = env.get_template("answer_pack.html")

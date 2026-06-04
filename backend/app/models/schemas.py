@@ -31,9 +31,14 @@ class SolvedQuestion(BaseModel):
 
 
 
+class TopicRevisionSummary(BaseModel):
+    topic_name: str = Field(..., description="The name of the topic or chapter (e.g. 'Database Architecture', 'SQL Basics').")
+    key_points_to_remember: List[str] = Field(..., description="List of key points, classification types, or essential formulas to memorize for this topic.")
+
 class AnswerPack(BaseModel):
     title: str = Field(..., description="The main subject or title of the answer pack.")
     questions: List[SolvedQuestion] = Field(..., description="The list of solved questions.")
+    things_to_remember: Optional[List[TopicRevisionSummary]] = Field(default_factory=list, description="A list of topic-wise key points, types, or terms to remember.")
 
 class Section(BaseModel):
     heading: str = Field(..., description="The main heading for this topic section.")

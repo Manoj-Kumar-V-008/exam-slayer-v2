@@ -210,23 +210,24 @@ h1, h2, h3, h4, h5, h6 {
 /* Embedded extracted image sizing and center alignment */
 .image-container {
     text-align: center;
-    margin: 15px 0;
+    margin: 6px 0;
     page-break-inside: avoid;
     break-inside: avoid;
 }
 
 .embedded-image {
     max-width: 100%;
-    max-height: 70mm;
-    border: 1px solid #e2e8f0;
+    max-height: 55mm; /* Compact height */
+    border: 1px solid #cbd5e1;
     border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* Table rendering styles - clean academic look */
 table {
     width: 100%;
     border-collapse: collapse;
-    margin: 10px 0 15px 0;
+    margin: 8px 0 12px 0;
     font-size: 8.5pt;
     page-break-inside: avoid;
     break-inside: avoid;
@@ -234,7 +235,7 @@ table {
 
 th, td {
     border: 1px solid #cbd5e1;
-    padding: 6px 10px;
+    padding: 5px 8px;
     text-align: left;
 }
 
@@ -252,12 +253,12 @@ tr:nth-child(even) {
 pre {
     background-color: #0f172a;
     color: #e2e8f0;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 4px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 8pt;
     overflow-x: auto;
-    margin: 8px 0;
+    margin: 6px 0;
     white-space: pre-wrap;
     word-break: break-all;
     page-break-inside: avoid;
@@ -279,3 +280,206 @@ pre code {
     padding: 0;
     font-size: inherit;
 }
+
+/* ========================================================
+   UNIFIED VISUAL LAYOUTS (V2 REFINE)
+   ======================================================== */
+
+/* Unified Q&A Card */
+.qa-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin-bottom: 6mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+.qa-header {
+    background-color: #f1f5f9;
+    padding: 8px 12px;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.q-number {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 9.5pt;
+    margin-right: 6px;
+}
+
+.q-marks {
+    font-size: 7.5pt;
+    font-weight: bold;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    background-color: #e0e7ff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.q-text {
+    font-weight: 700;
+    color: #0f172a;
+    margin-top: 4px;
+    font-size: 9.5pt;
+}
+
+.qa-body {
+    padding: 10px 12px;
+    font-size: 9.5pt;
+    line-height: 1.4;
+    color: #334155;
+}
+
+.qa-body p {
+    margin: 0 0 6px 0;
+}
+
+.qa-body p:last-child {
+    margin-bottom: 0;
+}
+
+/* Bullet list overrides inside Q&A answers for tight formatting */
+.qa-body ul {
+    margin: 4px 0 8px 0;
+    padding-left: 20px;
+}
+
+.qa-body li {
+    margin-bottom: 3px;
+}
+
+.qa-explanation {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background-color: #f0fdf4;
+    border-left: 3px solid #16a34a;
+    border-radius: 3px;
+    font-size: 9pt;
+    color: #166534;
+}
+
+.qa-quick-remember {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background-color: #faf5ff;
+    border-left: 3px solid #9333ea;
+    border-radius: 3px;
+    font-size: 9pt;
+    color: #581c87;
+    font-weight: 500;
+}
+
+/* Unified Study Section */
+.study-section {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin-bottom: 6mm;
+    page-break-inside: auto;
+    break-inside: auto;
+    overflow: hidden;
+    background-color: #ffffff;
+}
+
+.study-header {
+    background-color: #f1f5f9;
+    padding: 8px 12px;
+    border-bottom: 1px solid #cbd5e1;
+    font-size: 11pt;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.study-body {
+    padding: 10px 12px;
+}
+
+/* Sub-containers inside study guide to prevent scattered cards */
+.study-summary {
+    background-color: #fafafa;
+    padding: 8px 10px;
+    border-radius: 4px;
+    border: 1px solid #e5e5e5;
+    margin-bottom: 8px;
+}
+
+.study-points {
+    margin-bottom: 8px;
+}
+
+.study-points-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 9pt;
+    margin-bottom: 3px;
+}
+
+.study-tip {
+    background-color: #fffbeb;
+    border-left: 3px solid #d97706;
+    color: #78350f;
+    padding: 6px 10px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    font-size: 9pt;
+}
+
+.study-mistakes {
+    background-color: #fef2f2;
+    border-left: 3px solid #dc2626;
+    color: #7f1d1d;
+    padding: 6px 10px;
+    border-radius: 3px;
+    margin-bottom: 8px;
+    font-size: 9pt;
+}
+
+/* "Things to Remember" Appendix Layout */
+.things-to-remember-container {
+    page-break-before: always;
+    break-before: always;
+    margin-top: 10mm;
+}
+
+.appendix-title {
+    font-size: 14pt;
+    color: #0f172a;
+    border-bottom: 2px solid #9333ea;
+    padding-bottom: 4px;
+    margin-bottom: 6mm;
+    font-weight: 800;
+}
+
+.topic-card {
+    border: 1px dashed #d8b4fe;
+    border-left: 3px solid #9333ea;
+    border-radius: 5px;
+    background-color: #faf5ff;
+    padding: 10px 12px;
+    margin-bottom: 4mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+.topic-title {
+    font-size: 10.5pt;
+    color: #581c87;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.topic-list {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.topic-item {
+    font-size: 9pt;
+    color: #581c87;
+    margin-bottom: 3px;
+}
+

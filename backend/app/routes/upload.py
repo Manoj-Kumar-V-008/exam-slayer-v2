@@ -124,6 +124,14 @@ def run_pdf_extraction_pipeline(
                 parsed_questions=matched_questions
             )
             
+            # Generate the 'Things to Remember' appendix at the end of the pack
+            from app.services.ai import generate_things_to_remember
+            things_to_remember = generate_things_to_remember(
+                study_text=extraction_result["study_text"],
+                solved_questions=answer_pack_data.get("questions", [])
+            )
+            answer_pack_data["things_to_remember"] = things_to_remember
+            
             # Correct any UUID transcription errors in asset filenames
             from app.utils.asset_sanitizer import sanitize_embedded_assets
             sanitize_embedded_assets(answer_pack_data, job_id, extraction_result["assets"])

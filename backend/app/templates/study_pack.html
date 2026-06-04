@@ -22,112 +22,113 @@
 
     <!-- Content Sections -->
     {% for section in study_pack.sections %}
-    <div class="section-container">
-        <h2 class="section-title">{{ section.heading }}</h2>
-        
-        <!-- Summary Box -->
-        {% if section.summary_html and section.summary_html.strip() %}
-        <div class="summary-card">
-            <div class="summary-title">Topic Summary</div>
-            <div>{{ section.summary_html | safe }}</div>
+    <div class="study-section">
+        <!-- Section Header -->
+        <div class="study-header">
+            {{ section.heading }}
         </div>
-        {% endif %}
         
-        <!-- Simple Explanation / Analogy Box -->
-        {% if section.simple_explanation_html and section.simple_explanation_html.strip() %}
-        <div class="analogy-box">
-            <div class="analogy-title">💡 Intuitive Explanation & Analogy</div>
-            <div>{{ section.simple_explanation_html | safe }}</div>
-        </div>
-        {% endif %}
-        
-        <!-- Key Points Section (Filtered to prevent empty bullets) -->
-        {% if section.key_points_html %}
-        <div class="key-points-container">
-            <div class="key-points-title">Key Learning Points</div>
-            <ul class="key-points-list">
-                {% for point in section.key_points_html %}
-                <li class="key-point-item">{{ point | safe }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        
-        <!-- Exam Tip Warning Box -->
-        {% if section.exam_tip_html and section.exam_tip_html.strip() %}
-        <div class="exam-tip-box">
-            <div class="exam-tip-header">🎯 EXAM TIP / TRAP ALERT</div>
-            <div class="exam-tip-content">{{ section.exam_tip_html | safe }}</div>
-        </div>
-        {% endif %}
-        
-        <!-- Memory Trick -->
-        {% if section.memory_trick_html and section.memory_trick_html.strip() %}
-        <div class="memory-box">
-            <div class="memory-title">🔑 Memory Aid / Trick</div>
-            <div class="memory-content">{{ section.memory_trick_html | safe }}</div>
-        </div>
-        {% endif %}
-        
-        <!-- Common Mistakes (Filtered to prevent empty bullets) -->
-        {% if section.common_mistakes_html %}
-        <div class="mistakes-box">
-            <div class="mistakes-title">⚠️ Common Student Pitfalls</div>
-            <ul class="mistakes-list">
-                {% for mistake in section.common_mistakes_html %}
-                <li class="mistake-item">{{ mistake | safe }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        
-        <!-- Revision Cheatsheet (Filtered to prevent empty bullets) -->
-        {% if section.revision_cheatsheet_html %}
-        <div class="cheatsheet-box">
-            <div class="cheatsheet-title">⚡ Fast Revision Cheatsheet</div>
-            <ul class="cheatsheet-list">
-                {% for cheat_html in section.revision_cheatsheet_html %}
-                <li class="cheatsheet-item">{{ cheat_html | safe }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-        {% endif %}
-        
-        <!-- Likely Exam Questions (2, 5, 10 Marks) (Filtered to prevent empty bullets) -->
-        {% if section.likely_questions_2_marks_html or section.likely_questions_5_marks_html or section.likely_questions_10_marks_html %}
-        <div class="questions-container">
-            <div class="questions-section-title">📝 Likely Exam Questions</div>
-            
-            {% if section.likely_questions_2_marks_html %}
-                {% for q in section.likely_questions_2_marks_html %}
-                <div class="question-card">
-                    <span class="question-badge badge-2marks">2 MARKS - SHORT ANSWER</span>
-                    <div class="question-text">{{ q | safe }}</div>
-                </div>
-                {% endfor %}
+        <!-- Section Body -->
+        <div class="study-body">
+            <!-- Summary Box -->
+            {% if section.summary_html and section.summary_html.strip() %}
+            <div class="study-summary">
+                <div style="font-weight: 700; font-size: 8.5pt; color: #475569; text-transform: uppercase; margin-bottom: 3px; letter-spacing: 0.5px;">Topic Summary</div>
+                <div style="color: #334155; line-height: 1.4;">{{ section.summary_html | safe }}</div>
+            </div>
             {% endif %}
             
-            {% if section.likely_questions_5_marks_html %}
-                {% for q in section.likely_questions_5_marks_html %}
-                <div class="question-card">
-                    <span class="question-badge badge-5marks">5 MARKS - MEDIUM EXPLANATION</span>
-                    <div class="question-text">{{ q | safe }}</div>
-                </div>
-                {% endfor %}
+            <!-- Simple Explanation / Analogy Box -->
+            {% if section.simple_explanation_html and section.simple_explanation_html.strip() %}
+            <div class="qa-explanation" style="margin-top: 0; margin-bottom: 8px;">
+                <strong>💡 Analogy & Concept:</strong> {{ section.simple_explanation_html | safe }}
+            </div>
             {% endif %}
             
-            {% if section.likely_questions_10_marks_html %}
-                {% for q in section.likely_questions_10_marks_html %}
-                <div class="question-card">
-                    <span class="question-badge badge-10marks">10 MARKS - LONG ESSAY / ANALYSIS</span>
-                    <div class="question-text">{{ q | safe }}</div>
-                </div>
-                {% endfor %}
+            <!-- Key Points Section -->
+            {% if section.key_points_html %}
+            <div class="study-points">
+                <div class="study-points-title">Key Learning Points</div>
+                <ul style="margin: 2px 0 0 0; padding-left: 18px;">
+                    {% for point in section.key_points_html %}
+                    <li style="margin-bottom: 2px; color: #334155;">{{ point | safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Exam Tip Warning Box -->
+            {% if section.exam_tip_html and section.exam_tip_html.strip() %}
+            <div class="study-tip">
+                <strong>🎯 EXAM TIP:</strong> {{ section.exam_tip_html | safe }}
+            </div>
+            {% endif %}
+            
+            <!-- Memory Trick -->
+            {% if section.memory_trick_html and section.memory_trick_html.strip() %}
+            <div class="qa-quick-remember" style="margin-top: 0; margin-bottom: 8px;">
+                <strong>🔑 Memory Aid:</strong> {{ section.memory_trick_html | safe }}
+            </div>
+            {% endif %}
+            
+            <!-- Common Mistakes -->
+            {% if section.common_mistakes_html %}
+            <div class="study-mistakes">
+                <strong>⚠️ Common Student Pitfalls:</strong>
+                <ul style="margin: 2px 0 0 0; padding-left: 18px;">
+                    {% for mistake in section.common_mistakes_html %}
+                    <li style="margin-bottom: 1px; color: #7f1d1d;">{{ mistake | safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Revision Cheatsheet -->
+            {% if section.revision_cheatsheet_html %}
+            <div style="background-color: #f0f9ff; border-left: 3px solid #0284c7; padding: 6px 10px; border-radius: 3px; margin-bottom: 8px; color: #0c4a6e; font-size: 9pt;">
+                <strong>⚡ Quick Revision Checklist:</strong>
+                <ul style="margin: 2px 0 0 0; padding-left: 18px;">
+                    {% for cheat_html in section.revision_cheatsheet_html %}
+                    <li style="margin-bottom: 1px; color: #0c4a6e;">{{ cheat_html | safe }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- Likely Exam Questions (2, 5, 10 Marks) -->
+            {% if section.likely_questions_2_marks_html or section.likely_questions_5_marks_html or section.likely_questions_10_marks_html %}
+            <div style="margin-top: 10px; border-top: 1px solid #cbd5e1; padding-top: 8px;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 9pt; margin-bottom: 5px;">📝 Likely Exam Questions:</div>
+                
+                {% if section.likely_questions_2_marks_html %}
+                    {% for q in section.likely_questions_2_marks_html %}
+                    <div style="margin-bottom: 4px; font-size: 8.5pt;">
+                        <span style="font-size: 7pt; font-weight: bold; color: #0284c7; background-color: #e0f2fe; padding: 1px 4px; border-radius: 2px; margin-right: 4px;">2M</span>
+                        {{ q | safe }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% if section.likely_questions_5_marks_html %}
+                    {% for q in section.likely_questions_5_marks_html %}
+                    <div style="margin-bottom: 4px; font-size: 8.5pt;">
+                        <span style="font-size: 7pt; font-weight: bold; color: #d97706; background-color: #fef3c7; padding: 1px 4px; border-radius: 2px; margin-right: 4px;">5M</span>
+                        {{ q | safe }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% if section.likely_questions_10_marks_html %}
+                    {% for q in section.likely_questions_10_marks_html %}
+                    <div style="margin-bottom: 4px; font-size: 8.5pt;">
+                        <span style="font-size: 7pt; font-weight: bold; color: #9333ea; background-color: #faf5ff; padding: 1px 4px; border-radius: 2px; margin-right: 4px;">10M</span>
+                        {{ q | safe }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
             {% endif %}
         </div>
-        {% endif %}
-        
-
     </div>
     {% endfor %}
 

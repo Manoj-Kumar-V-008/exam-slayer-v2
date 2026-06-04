@@ -22,63 +22,67 @@
 
     <!-- Content Sections -->
     {% for q in answer_pack.questions %}
-    <div class="section-container">
-        <!-- Question Title Header -->
-        <h2 class="section-title">
-            {{ q.question_number }}
+    <div class="qa-card">
+        <!-- Unified Question & Answer Header -->
+        <div class="qa-header">
+            <span class="q-number">{{ q.question_number }}</span>
             {% if q.marks_category %}
-            <span style="font-size: 8pt; font-weight: bold; color: #4f46e5; margin-left: 8px; border: 1px solid #c7d2fe; background-color: #e0e7ff; padding: 1px 6px; border-radius: 3px; display: inline-block; vertical-align: middle;">
-                {{ q.marks_category }}
-            </span>
+            <span class="q-marks">{{ q.marks_category }}</span>
             {% endif %}
-        </h2>
-        
-        <!-- Question Text Card -->
-        <div class="question-card">
-            {{ q.question_text }}
+            <div class="q-text">{{ q.question_text }}</div>
         </div>
         
-        <!-- Answer Box -->
-        {% if q.answer_html and q.answer_html.strip() %}
-        <div class="answer-card">
-            <div class="answer-title">Ideal Exam-Ready Answer</div>
-            <div style="color: #1e293b; line-height: 1.5; font-size: 9.5pt;">
+        <!-- Answer Body (Answers structured in simple English and Bullet Points) -->
+        <div class="qa-body">
+            {% if q.answer_html and q.answer_html.strip() %}
                 {{ q.answer_html | safe }}
+            {% endif %}
+            
+            <!-- Simple Explanation / Background Analogy -->
+            {% if q.simple_explanation_html and q.simple_explanation_html.strip() %}
+            <div class="qa-explanation">
+                <strong>Explanation:</strong> {{ q.simple_explanation_html | safe }}
             </div>
-        </div>
-        {% endif %}
-        
-        <!-- Simple Explanation / Analogy Box -->
-        {% if q.simple_explanation_html and q.simple_explanation_html.strip() %}
-        <div class="analogy-box">
-            <div class="analogy-title">💡 Explanation & Background</div>
-            <div>{{ q.simple_explanation_html | safe }}</div>
-        </div>
-        {% endif %}
-        
-        <!-- Memory Trick -->
-        {% if q.memory_trick_html and q.memory_trick_html.strip() %}
-        <div class="memory-box">
-            <div class="memory-title">🔑 Memory Aid / Mnemonic</div>
-            <div>{{ q.memory_trick_html | safe }}</div>
-        </div>
-        {% endif %}
-        
-        <!-- Revision Points -->
-        {% if q.quick_revision_points_html %}
-        <div class="cheatsheet-box">
-            <div class="cheatsheet-title">⚡ Fast Revision Bullets</div>
-            <ul class="cheatsheet-list">
+            {% endif %}
+            
+            <!-- Memory Trick (Quick Remember Memory Aid) -->
+            {% if q.memory_trick_html and q.memory_trick_html.strip() %}
+            <div class="qa-quick-remember">
+                <strong>Quick Remember:</strong> {{ q.memory_trick_html | safe }}
+            </div>
+            {% endif %}
+            
+            <!-- Compact Fast Revision Points -->
+            {% if q.quick_revision_points_html %}
+            <div style="margin-top: 8px; font-size: 8.5pt; color: #475569; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                ⚡ Fast Revision:
+            </div>
+            <ul style="margin: 2px 0 0 0; padding-left: 18px;">
                 {% for point in q.quick_revision_points_html %}
-                <li class="cheatsheet-item">{{ point | safe }}</li>
+                <li style="font-size: 8.5pt; color: #475569; margin-bottom: 2px;">{{ point | safe }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Things to Remember Topic-wise Revision Sheets -->
+    {% if answer_pack.things_to_remember %}
+    <div class="things-to-remember-container">
+        <h2 class="appendix-title">🧠 Things to Remember (Quick Revision Sheets)</h2>
+        {% for topic in answer_pack.things_to_remember %}
+        <div class="topic-card">
+            <div class="topic-title">{{ topic.topic_name }}</div>
+            <ul class="topic-list">
+                {% for point in topic.key_points_to_remember_html %}
+                <li class="topic-item">{{ point | safe }}</li>
                 {% endfor %}
             </ul>
         </div>
-        {% endif %}
-        
-
+        {% endfor %}
     </div>
-    {% endfor %}
+    {% endif %}
 
 </body>
 </html>

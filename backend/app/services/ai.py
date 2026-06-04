@@ -122,66 +122,54 @@ The target output is a set of premium, university-exam model answers designed to
 {questions_list_str}
 
 === CRITICAL PRINCIPLES FOR DYNAMIC, SUBJECT-AGNOSTIC ANSWER COMPOSITION ===
-Exam Slayer is a subject-agnostic academic system. It must work equally well for DBMS, Operating Systems, Computer Networks, Algorithms, Data Structures, AI/ML, Mathematics, Programming, Theory subjects, and future engineering subjects. The system must adapt to the question rather than forcing it into a predefined template.
+Exam Slayer is a subject-agnostic academic system. It must work equally well for DBMS, Operating Systems, Computer Networks, Algorithms, Data Structures, AI/ML, Mathematics, Programming, Theory subjects, and future engineering subjects. The system must adapt to the question.
 
-1. INTERNAL PLANNING (Do NOT expose in output):
-   - Before generating each answer, internally determine: Dominant Intent, Sub-Intents, Topic/Domain, Expected Exam Depth, Most Relevant Components, and Best Answer Structure.
-   - Use this plan internally to build the answer dynamically. Do NOT output or expose this planning process in the JSON fields.
+1. THE EXCELLENT TEACHER RULE (SIMPLE & SMOOTH ENGLISH):
+   - Rewrite explanations into simple, smooth, natural, and conversational English.
+   - Strictly avoid complex sentences, textbook-style wording, or dry academic jargon.
+   - Keep sentences short. Focus on absolute clarity over sophisticated vocabulary.
+   - If a concept can be explained in a simpler way without losing meaning, do it. Write as if you are a friendly, excellent tutor helping a student memorize concepts easily.
 
-2. TOOLBOX PRINCIPLE & INTELLIGENT COMPONENT SELECTION:
+2. STRUCTURED BULLET POINTS:
+   - Structure answers using clean, bullet-pointed lists (e.g. • Key Point 1) wherever appropriate instead of walls of text. Avoid paragraphs longer than 3 lines.
+
+3. TOOLBOX PRINCIPLE & INTELLIGENT COMPONENT SELECTION:
    - Answer components are a toolbox, NOT a checklist. Select only the components that genuinely improve the answer. Do NOT automatically include Architecture, Applications, Advantages, Disadvantages, Comparisons, Examples, or Limitations unless they naturally fit the question.
-   - Prefer fewer highly relevant sections over many weak sections. The best answer is the most relevant answer, not the one with the most headings.
    - Intelligently select from these available components to build a natural, topic-aware flow under clear subsection headings (e.g., `### Component Name`):
      - Definition / Concept Overview
      - Core Explanation / Working Principle
      - Architecture / Components (Render as compact, scannable markdown tables)
-     - Characteristics / Features
-     - Classification / Types (Render as compact, scannable markdown tables)
-     - Formula / Mathematical Derivation / Theorem / Principle
-     - Algorithm / Pseudocode / Flow / Process / Step-by-Step Procedure (Render as ordered numbered lists)
+     - Formula / Mathematical Derivation / Theorem
+     - Algorithm / Pseudocode / Process / Step-by-Step Procedure (Render as ordered numbered lists)
      - Example / Code Block / SQL Query / Relational Algebra Expression
-     - Schema Design / ER Mapping (Use formal mappings with underlined primary keys and italicized foreign keys)
-     - Diagram Explanation (Detailed textual description describing elements and connections; do NOT generate ASCII art)
+     - Schema Design / ER Mapping (Use formal mappings with underlined primary keys)
+     - Diagram Explanation (Detailed textual description; do NOT generate ASCII art)
      - Comparison Table (Render always as a clean markdown table comparing metrics/features side-by-side)
-     - Advantages / Disadvantages / Limitations (Bulleted comparisons of pros/cons)
-     - Applications / Use Cases / Best Practices / Security Considerations
-     - Performance / Complexity Analysis (Analysis of run-time, space, or throughput behavior)
-     - Summary / Key Takeaways
+     - Advantages / Disadvantages / Limitations (Bulleted lists)
+     - Applications / Use Cases
 
-3. INTENT-DRIVEN PRIORITIZATION:
-   - The `dominant_intent` determines the answer emphasis, largest content allocation, primary formatting style, and answer organization.
-   - **CRITICAL CODE/SQL RULE**: If SQL, code, trigger, relational algebra, or programming logic is the dominant intent (or SQL is in the sub-intents), you MUST start the 'answer' field IMMEDIATELY with the code/query block (```sql ... ``` or relevant language block). Do NOT write any introduction, headings before the code block, or conversational context before it. Start with the query/code directly, then write the detailed logic breakdowns, explanations, schemas, and alternative solutions in separate subsections afterward.
+4. INTENT-DRIVEN PRIORITIZATION:
+   - The `dominant_intent` determines the answer emphasis, largest content allocation, and answer organization.
+   - **CRITICAL CODE/SQL RULE**: If SQL, code, or programming logic is the dominant intent, start the 'answer' field IMMEDIATELY with the code/query block. Do NOT write any introduction or conversational context before it.
 
-4. STRICT MARKS-AWARE WORD LIMITS:
-   - You MUST satisfy these word counts for every single question. Writing too short answers is a severe failure.
+5. STRICT MARKS-AWARE WORD LIMITS:
+   - You MUST satisfy these word counts for every single question.
    - **2 Marks**: Target 80–150 words. Direct answer. Concise but complete.
-   - **5 Marks**: Target 200–350 words. Structured explanation. Include examples/tables where useful.
-   - **10 Marks**: Target 500–800 words. Comprehensive university-level answer with deep explanation. Generate as many sections as necessary to comprehensively answer the question (typical range is 4–8 meaningful sections, but do NOT force a fixed count).
-   - **Important Length Enforcement**: To meet length requirements and pass validations, every 10 Marks answer MUST be at least 450-800 words (aim for 550+ words). Within your chosen 4-8 sections, you must explain the concepts, algorithms, steps, or features exhaustively. Write detailed, deep paragraphs of 3-4 sentences each. Do NOT use brief one-sentence bullet points or short table cell phrases. Elaborate on theoretical background, mechanics, advantages, and alternative approaches in detail. Prioritize completeness and depth to naturally reach this length.
-   - If the marks category is "Unknown" or missing in the target list, infer the marks based on complexity and apply the correct word limits.
+   - **5 Marks**: Target 200–350 words. Structured explanation with examples/tables.
+   - **10 Marks**: Target 500–800 words. Comprehensive university-level answer. Generate as many sections as necessary to comprehensively answer the question (typical range is 4–8 sections).
+   - Every 10 Marks answer MUST be at least 450-800 words (aim for 550+ words). Prioritize completeness and depth to naturally reach this length.
 
-5. FORMATTING & READABILITY RULES (5-SECOND SCANNING RULE):
-   - **Eliminate Walls of Text**: Avoid paragraphs longer than 3–4 visible lines. Introduce spacing between concepts.
-   - **Section-Based Composition**: Use clear subsection headings (`### Component Name`). Separate major concepts visually.
-   - **Visual Chunking**: Students should understand the answer structure within 5 seconds. Use whitespace, clear section separation, and heading hierarchy. Group related details visually. Avoid large consecutive paragraphs or long uninterrupted text regions.
-   - **Keyword Highlighting**: Bold important concepts and technical terms (e.g., `**Time Complexity**`, `**Virtual Memory**`, `**Encapsulation**`) so students can instantly identify them while scrolling.
-   - **Tables**: Use markdown tables (`| Column 1 | Column 2 |`) for comparisons, classifications, architectures, and structured information.
-   - **Lists**: Use numbered lists for processes/procedures, and bullet points for grouped concepts.
-   - **Code Formatting**: Use proper markdown code blocks.
-   - **Mobile-Friendly Reading**: Ensure the answer remains easy to scan on phones and laptops.
-
-6. UNIVERSITY-GRADE QUALITY & STYLE:
-   - Target a formal, academic, clear, teacher-friendly, university exam scoring-oriented tone.
-   - Strictly avoid chatbot-style dialogue, conversational filler (e.g., "Sure, here is the answer", "In this section we will discuss"), and introductory/concluding remarks.
-   - Use precise technical terminology.
+6. FORMATTING & READABILITY RULES (5-SECOND SCANNING RULE):
+   - Students should understand the answer structure within 5 seconds. Use whitespace, clear section separation, and heading hierarchy.
+   - **Keyword Highlighting**: Bold important concepts and technical terms (e.g., `**Time Complexity**`, `**Virtual Memory**`) so students can instantly identify them while scrolling.
+   - **Tables**: Use markdown tables (`| Column 1 | Column 2 |`) for comparisons and architectures.
 
 7. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
    - Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth.
-   - Priority 2 (No Coverage / Missing Notes): If the study notes are insufficient or lack coverage of a question, you must fall back to your general model knowledge silently and seamlessly.
-   - **CRITICAL**: Do NOT append any footnotes, notices, or warning disclaimers like "*(Note: Extended beyond uploaded notes.)*" under any circumstances. Proceed silently and seamlessly.
+   - Priority 2 (No Coverage): If the study notes are insufficient, fall back to your general model knowledge silently and seamlessly. Do NOT append any disclaimers like "*(Note: Extended beyond uploaded notes.)*".
 
 8. STRICT NO-IMAGE-PLACEHOLDERS RULE:
-   - Do NOT write or output any image placeholders like `{{IMAGE_ASSET:...}}` or HTML image tags in the 'answer' text. The system handles all diagram placement programmatically after you generate the text. If any diagrams are listed in 'Matched Diagrams to Discuss', discuss their concepts and structure textually using their captions, but do not insert the raw image tags.
+   - Do NOT write or output any image placeholders like `{{IMAGE_ASSET:...}}` or HTML image tags in the 'answer' text. The system handles all diagram placement programmatically after you generate the text.
 
 9. SCHEMA FIELD STRUCTURE:
    Conform to the AnswerPack schema and provide these fields for each question:
@@ -190,10 +178,10 @@ Exam Slayer is a subject-agnostic academic system. It must work equally well for
    - `marks_category`: "2 Marks", "5 Marks", or "10 Marks" (inferred or explicit).
    - `dominant_intent`: Exactly as given in target list.
    - `sub_intents`: Exactly as given in target list.
-   - `answer`: The exam-ready solution conforming strictly to the word limits, formatting, and markdown rules above.
+   - `answer`: The exam-ready solution conforming strictly to the word limits, formatting, and simple English instructions.
    - `simple_explanation`: A very brief (max 50 words) intuitive plain-English analogy.
-   - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing the key takeaways.
-   - `memory_trick`: A short (max 12 words) mnemonic or quick association trigger.
+   - `quick_revision_points`: Exactly 3 short bullet points (max 8 words per bullet) summarizing key takeaways.
+   - `memory_trick`: A short, high-value "Quick Remember" summary or mnemonic (max 12 words), prefixed with "Quick Remember: " (e.g. `Quick Remember: DBMS ensures data integrity`).
    - `related_assets`: Keep this list empty. The system will populate it programmatically.
 
 Keep Unicode math symbols, subscripts, superscripts, and Greek letters (e.g. λ, θ) intact to preserve formula rendering quality.
@@ -311,3 +299,74 @@ def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> di
         "title": final_title,
         "questions": all_solved_questions
     }
+
+def generate_things_to_remember(study_text: str, solved_questions: List[dict]) -> List[dict]:
+    """
+    Generates a topic-wise list of key points, classification types, and terms to remember
+    by analyzing the generated questions/answers and study notes.
+    """
+    if not settings.GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY not configured. Skipping revision sheets generation.")
+        return []
+
+    logger.info("Generating 'Things to Remember' (Quick Revision sheets)...")
+    
+    # Create summary list of questions and answers to feed into prompt
+    qa_summary = ""
+    for sq in solved_questions:
+        qa_summary += f"Question {sq.get('question_number')}: {sq.get('question_text')}\nAnswer Brief: {sq.get('simple_explanation')}\nKey Points: {', '.join(sq.get('quick_revision_points', []))}\n\n"
+
+    # We want a list of TopicRevisionSummary
+    from app.models.schemas import TopicRevisionSummary
+    from pydantic import BaseModel
+    
+    class RevisionList(BaseModel):
+        topics: List[TopicRevisionSummary]
+
+    prompt = f"""
+    You are an expert academic tutor compiling a master revision cheatsheet called "Things to Remember".
+    Based on the following solved exam questions/answers and study notes, create a clean topic-wise summary.
+    
+    Focus on:
+    - Essential classification types (e.g. types of DBMS architectures, types of normal forms, types of transactions, etc.).
+    - Core keywords and definitions that students must write in exams.
+    - Essential formulas, rules, or key steps to memorize.
+    
+    Style instructions:
+    - Group items logically by topic/chapter (aim for 3-5 distinct topics).
+    - Under each topic, provide exactly 4-6 concise, bullet-pointed sentences of key facts or types to memorize.
+    - Use simple, direct, smooth English. Avoid textbook jargon.
+    
+    === SOLVED QUESTIONS & ANSWERS SUMMARY ===
+    {qa_summary}
+    
+    === STUDY NOTES Passages ===
+    {study_text[:20000]}
+    
+    Return a structured JSON output matching the RevisionList schema.
+    """
+    
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    models = settings.QUESTION_PARSER_MODELS
+    
+    for model in models:
+        try:
+            logger.info(f"Generating Revision Sheets using model: {model}")
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=RevisionList,
+                    temperature=0.2
+                )
+            )
+            if response.text:
+                parsed = RevisionList.model_validate_json(response.text)
+                return [t.model_dump() for t in parsed.topics]
+        except Exception as e:
+            logger.warning(f"Failed to generate revision sheets using model {model}: {e}")
+            continue
+            
+    return []
+

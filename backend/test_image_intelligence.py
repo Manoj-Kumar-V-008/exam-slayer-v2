@@ -45,7 +45,7 @@ We compare options.
     placed = place_images_in_answer(answer_markdown, matched_images)
     # Check that img_4.png is placed right below the Three Schema Architecture heading
     placed_clean = " ".join(placed.split())
-    assert "### Three Schema Architecture {{IMAGE_ASSET:img_4.png}}" in placed_clean, f"Placeholder placement failed: {placed}"
+    assert "### Three Schema Architecture The DBMS three-schema architecture is crucial. {{IMAGE_ASSET:img_4.png}}" in placed_clean, f"Placeholder placement failed: {placed}"
     print("SUCCESS: programmatic placeholder placement in heading test passed.")
 
     # 3. Test calculate_relevance_score

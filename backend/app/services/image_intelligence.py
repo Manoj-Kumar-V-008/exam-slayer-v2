@@ -1,11 +1,40 @@
 import re
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
-from PIL import Image
+from PIL import Image, ImageChops
+from pathlib import Path
 from app.config import settings
 from app.utils.logger import logger
 from google import genai
 from google.genai import types
+
+def crop_whitespace(image_path: Path) -> None:
+    """Crops any unnecessary white border padding from an image using PIL."""
+    try:
+        with Image.open(image_path) as img:
+            rgb_img = img.convert("RGB")
+            # Create a solid white background image
+            bg = Image.new("RGB", rgb_img.size, (255, 255, 255))
+            # Find difference
+            diff = ImageChops.difference(rgb_img, bg)
+            # Get bounding box of difference
+            bbox = diff.getbbox()
+            if bbox:
+                # Add a small 5px padding
+                padding = 5
+                xmin, ymin, xmax, ymax = bbox
+                xmin = max(0, xmin - padding)
+                ymin = max(0, ymin - padding)
+                xmax = min(img.width, xmax + padding)
+                ymax = min(img.height, ymax + padding)
+                
+                cropped = img.crop((xmin, ymin, xmax, ymax))
+                cropped.save(image_path)
+                logger.info(f"Cropped whitespace for {image_path.name}. New size: {cropped.size}")
+            else:
+                logger.info(f"Image {image_path.name} is fully white or blank. Skipping crop.")
+    except Exception as e:
+        logger.error(f"Failed to crop whitespace for {image_path}: {e}")
 
 class ImageMetadata(BaseModel):
     filename: str = Field(..., description="The exact filename of the image.")
@@ -61,6 +90,9 @@ def generate_image_metadata_layer(job_id: str, assets: List[str], study_text: st
         if not image_path.exists():
             logger.warning(f"Image path {image_path} does not exist. Skipping.")
             continue
+
+        # Automatically crop whitespace to improve diagram quality
+        crop_whitespace(image_path)
 
         surrounding = get_surrounding_text(study_text, filename)
         
@@ -206,9 +238,20 @@ def calculate_relevance_score(question_text: str, question_analysis: Dict[str, A
     # 3. Jaccard word similarity on text content (4+ letter words)
     q_words = set(re.findall(r'\b\w{4,}\b', q_text_lower))
     img_words = set(re.findall(r'\b\w{4,}\b', img_surrounding_lower))
+    jaccard = 0.0
     if q_words and img_words:
         jaccard = len(q_words.intersection(img_words)) / len(q_words.union(img_words))
         score += jaccard * 10.0  # Up to 10 points
+        
+    # Conceptual Overlap Guard:
+    # If there is 0 keyword overlap, 0 Jaccard similarity, and no caption word overlap, force score to 0.0
+    has_kw_overlap = len(overlap) > 0
+    has_jaccard_overlap = jaccard > 0.01
+    has_caption_match = any(word in q_text_lower for word in img_caption_lower.split() if len(word) >= 4)
+    
+    if not (has_kw_overlap or has_jaccard_overlap or has_caption_match):
+        logger.debug(f"Zero conceptual overlap guard triggered for image '{image.get('filename')}' on question '{question_text[:50]}...'. Forcing score to 0.0.")
+        return 0.0
         
     # 4. Image type and dominant intent relevance
     img_type = image.get("image_type", "").lower()
@@ -331,6 +374,9 @@ def match_images_for_questions(parsed_questions: List[Dict[str, Any]], image_met
 
     logger.info(f"Matching {len(image_metadata_list)} images against {len(parsed_questions)} questions...")
     matched_questions = []
+    
+    # Keep track of how many times each image is matched across the entire pack
+    image_usage_counts = {}
 
     for q in parsed_questions:
         q_text = q.get("question_text", "")
@@ -390,6 +436,15 @@ def match_images_for_questions(parsed_questions: List[Dict[str, Any]], image_met
         
         temp_candidates = []
         for score, img in candidate_scores:
+            # Image Reuse Spam Prevention
+            # Limit: at most 1 question, or at most 2 questions if score is >= 15.0 (exceptionally high match)
+            filename = img["filename"]
+            usage = image_usage_counts.get(filename, 0)
+            max_allowed = 2 if score >= 15.0 else 1
+            if usage >= max_allowed:
+                logger.debug(f"Skipping image {filename} for question '{q.get('question_number')}' - reached reuse limit ({usage}/{max_allowed})")
+                continue
+                
             if mode == "Explicit Diagram Required":
                 # Lower threshold for explicit diagrams
                 if score >= 5.0:
@@ -424,6 +479,11 @@ def match_images_for_questions(parsed_questions: List[Dict[str, Any]], image_met
                         
         q["matched_images"] = final_list
         q["related_assets"] = [img["filename"] for img in final_list]
+        
+        # Record image usage
+        for img in final_list:
+            image_usage_counts[img["filename"]] = image_usage_counts.get(img["filename"], 0) + 1
+            
         logger.info(f"Question '{q.get('question_number')}' matched with {len(final_list)} images: {[img['filename'] for img in final_list]}")
         matched_questions.append(q)
 
@@ -512,12 +572,8 @@ def place_images_in_answer(answer_markdown: str, matched_images: List[Dict[str, 
         best_sec = sections[best_idx]
         img_placeholder = f"\n\n{{{{IMAGE_ASSET:{img['filename']}}}}}\n\n"
         
-        # Programmatic injection directly below the section heading (or at end of text if no heading)
-        if best_sec["heading"]:
-            best_sec["content"] = img_placeholder + best_sec["content"]
-        else:
-            best_sec["content"] = best_sec["content"] + img_placeholder
-            
+        # Programmatic injection directly after the section content (placing diagrams after text explanations)
+        best_sec["content"] = best_sec["content"] + img_placeholder
         best_sec["full_text"] = best_sec["heading"] + "\n" + best_sec["content"]
 
     # Reconstruct final markdown
