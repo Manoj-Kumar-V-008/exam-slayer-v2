@@ -57,6 +57,10 @@ def run_pdf_extraction_pipeline(
         if ocr_used:
             jobs_db[job_id]["ocr_used"] = True
             
+        # 4. Update status to AI_PROCESSING (solving or compiling)
+        jobs_db[job_id]["status"] = JobStatus.AI_PROCESSING
+        logger.info(f"Extraction complete for job {job_id}. Update status to {JobStatus.AI_PROCESSING} and generating image metadata...")
+
         # Generate image metadata layer
         from app.services.image_intelligence import generate_image_metadata_layer
         image_metadata = generate_image_metadata_layer(
@@ -65,9 +69,7 @@ def run_pdf_extraction_pipeline(
             study_text=extraction_result["study_text"]
         )
         jobs_db[job_id]["image_metadata"] = image_metadata
-            
-        # 4. Update status to AI_PROCESSING (solving or compiling)
-        jobs_db[job_id]["status"] = JobStatus.AI_PROCESSING
+
         
         if mode == ProductMode.STUDY_PACK:
             logger.info(f"Extraction complete for job {job_id}. Starting Gemini AI study guide generation...")

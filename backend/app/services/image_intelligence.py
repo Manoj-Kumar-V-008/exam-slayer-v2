@@ -73,31 +73,16 @@ def generate_image_metadata_layer(job_id: str, assets: List[str], study_text: st
         return []
 
     logger.info(f"Generating image metadata layer for {len(assets)} assets...")
-    metadata_list = []
     
-    # Initialize Google GenAI client
-    if not settings.GEMINI_API_KEY:
-        logger.error("GEMINI_API_KEY is not configured in settings.")
-        return []
-        
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    
-    # We will use ANSWER_PACK_MODELS which contains Flash models capable of multimodal vision tasks
-    models = settings.ANSWER_PACK_MODELS
-
+    # 1. Pre-initialize all assets with default fallback metadata and crop white margins
+    metadata_map = {}
     for filename in assets:
         image_path = settings.ASSETS_DIR / filename
-        if not image_path.exists():
-            logger.warning(f"Image path {image_path} does not exist. Skipping.")
-            continue
-
-        # Automatically crop whitespace to improve diagram quality
-        crop_whitespace(image_path)
-
+        if image_path.exists():
+            crop_whitespace(image_path)
+            
         surrounding = get_surrounding_text(study_text, filename)
-        
-        # Default fallback metadata
-        fallback_meta = {
+        metadata_map[filename] = {
             "filename": filename,
             "caption": "Study notes diagram",
             "keywords": [],
@@ -106,6 +91,40 @@ def generate_image_metadata_layer(job_id: str, assets: List[str], study_text: st
             "educational_value": "medium",
             "visual_weight": "medium"
         }
+
+    # Initialize Google GenAI client
+    if not settings.GEMINI_API_KEY:
+        logger.error("GEMINI_API_KEY is not configured in settings.")
+        return list(metadata_map.values())
+        
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    models = settings.ANSWER_PACK_MODELS
+
+    # 2. Gather existing assets and sort by file size descending (proxy for complexity/academic value)
+    existing_assets_with_size = []
+    for filename in assets:
+        image_path = settings.ASSETS_DIR / filename
+        if image_path.exists():
+            existing_assets_with_size.append((filename, image_path.stat().st_size))
+            
+    existing_assets_with_size.sort(key=lambda x: x[1], reverse=True)
+    
+    # Limit analysis to top 12 largest files to prevent rate limits (429) and huge document load delays.
+    top_assets = [x[0] for x in existing_assets_with_size[:12]]
+    skipped_count = len(existing_assets_with_size) - len(top_assets)
+    if skipped_count > 0:
+        logger.info(f"Limiting Gemini multimodal analysis to top 12 largest images. {skipped_count} images will use default fallback metadata.")
+
+    # Flag to immediately skip calls if we detect Gemini quota exhaustion (429)
+    quota_exhausted = False
+
+    for filename in top_assets:
+        if quota_exhausted:
+            logger.info(f"Skipping Gemini analysis for image {filename} (quota already exhausted). Keeping default fallback.")
+            continue
+
+        image_path = settings.ASSETS_DIR / filename
+        surrounding = metadata_map[filename]["surrounding_text"]
 
         try:
             img = Image.open(image_path)
@@ -126,7 +145,9 @@ def generate_image_metadata_layer(job_id: str, assets: List[str], study_text: st
             """
             
             parsed_result = None
-            for model in models:
+            # Only try the top 2 models to fail fast and prevent endless loop delays
+            models_to_try = models[:2] if len(models) >= 2 else models
+            for model in models_to_try:
                 try:
                     logger.info(f"Analyzing {filename} with multimodal model '{model}'...")
                     response = client.models.generate_content(
@@ -143,10 +164,15 @@ def generate_image_metadata_layer(job_id: str, assets: List[str], study_text: st
                         break
                 except Exception as e:
                     logger.warning(f"Model '{model}' failed to analyze image {filename}: {e}")
+                    from app.services.gemini_router import _is_quota_error
+                    if _is_quota_error(e):
+                        logger.warning("Gemini API rate limit/quota error detected. Setting quota_exhausted flag to skip subsequent image calls.")
+                        quota_exhausted = True
+                        break
                     continue
             
             if parsed_result:
-                metadata_list.append({
+                metadata_map[filename] = {
                     "filename": filename,
                     "caption": parsed_result.caption,
                     "keywords": [k.lower().strip() for k in parsed_result.keywords if k],
@@ -154,17 +180,22 @@ def generate_image_metadata_layer(job_id: str, assets: List[str], study_text: st
                     "surrounding_text": surrounding,
                     "educational_value": parsed_result.educational_value.lower().strip(),
                     "visual_weight": parsed_result.visual_weight.lower().strip()
-                })
+                }
                 logger.info(f"Successfully generated metadata for image {filename}: Type='{parsed_result.image_type}', EdValue='{parsed_result.educational_value}'")
             else:
-                logger.warning(f"All models failed for image {filename}. Using fallback.")
-                metadata_list.append(fallback_meta)
+                logger.warning(f"All models failed for image {filename}. Keeping default fallback.")
                 
         except Exception as ex:
-            logger.error(f"Error processing image {filename}: {ex}. Using fallback.")
-            metadata_list.append(fallback_meta)
+            logger.error(f"Error processing image {filename}: {ex}. Keeping default fallback.")
 
-    return metadata_list
+    # Return metadata items in the original order of the input assets list
+    ordered_metadata = []
+    for filename in assets:
+        if filename in metadata_map:
+            ordered_metadata.append(metadata_map[filename])
+            
+    return ordered_metadata
+
 
 def analyze_question(question_text: str) -> Dict[str, Any]:
     """Extracts keywords and subject domain from a question using Gemini."""

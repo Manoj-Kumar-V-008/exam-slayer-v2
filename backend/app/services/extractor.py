@@ -78,7 +78,11 @@ def should_run_ocr_fallback(result: Dict[str, Any], file_ext: str) -> bool:
         return False
 
     if ext_clean == "pdf":
-        return True
+        # Only run OCR fallback if the PDF has virtually zero text (scanned PDF).
+        # Short digital PDFs (like a 14-question question bank) with readable text
+        # should skip OCR fallback to prevent major latency/hang issues.
+        return text_length < 40
+
 
     if ext_clean in ["docx", "doc", "pptx", "ppt"]:
         return any(path.exists() for path in _asset_paths_from_result(result))

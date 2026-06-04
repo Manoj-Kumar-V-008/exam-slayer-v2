@@ -80,7 +80,8 @@ class OCRService:
                     raise FileNotFoundError(f"OCR image not found: {img_path}")
 
                 with Image.open(img_path) as image:
-                    text = pytesseract.image_to_string(image, lang="eng")
+                    text = pytesseract.image_to_string(image, lang="eng", timeout=20)
+
 
                 successful_runs += 1
                 clean_text = text.strip()
