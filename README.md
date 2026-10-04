@@ -83,7 +83,10 @@ Exam Slayer V2 operates in two production-ready compiler pathways to fit differe
 ## ✨ Features
 
 - **Hybrid Question Parsing**: Uses structural algorithms (regex, typography) coupled with Google Gemini AI to accurately segment question bounds in unstructured documents.
-- **Context-Aided RAG Architecture**: Direct grounding in uploaded study guides to guarantee answers align with course-specific syllabi.
+- **Vision-Grounded Generation (Oct 2026)**: Renders PDF pages to JPEG (`backend/app/services/vision.py`) and sends them multimodally to Gemini, so diagrams, tables, and formulas are seen — not just filenames. Diagram-heavy pages prioritized (max 8/job), text-only fallback.
+- **Verifiable RAG with Citations (Oct 2026)**: Local TF-IDF retrieval (`backend/app/services/rag.py`, no vector DB) chunks notes source-aware and retrieves top-4 per batch. Answers carry inline `[S1]` citations plus a `sources` list rendered in the PDF.
+- **Quality Gate + Retry (Oct 2026)**: Deterministic eval (`backend/app/services/eval.py`) checks citations, marks-aware length, and placeholder leaks; failed batches retry once with a strict fix prompt. Per-question `eval_pass`/`eval_score` logged.
+- **Servable-Model Routing**: Prioritized Gemini 3.5/3.1 lists with fail-fast on retired-model 404s; terminal errors now surface tried models + last error instead of hiding root cause.
 - **Dynamic Answer Batching**: Orchestrates segmented API queries to solve large question papers completely without running into model context windows or token limits.
 - **Advanced OCR Support**: Integrated with `Tesseract OCR` to extract clean text from scanned exam papers and handwriting.
 - **Multi-Model Fallback Routing**: Auto-routing between Gemini models to maintain low latency and high availability.
@@ -127,9 +130,14 @@ flowchart TD
     Parser --> Classify
     Classify --> Router
     
-    Notes --> Router
+    Notes --> TextExtract["📄 Text + Asset Extraction (PyMuPDF)"]
+    Notes --> Vision["🖼️ Page Renders (diagram-prioritized, max 8)"]
+    TextExtract --> RAG["📚 RAG Retrieval (TF-IDF top-4 + [S#] citations)"]
+    Vision --> Router
+    RAG --> Router
     Router --> Solve
-    Solve --> Render
+    Solve --> Eval["✅ Quality Gate (citations/length/leak + 1 retry)"]
+    Eval --> Render
     Render --> Weasy
     Weasy --> Pack
 ```
@@ -244,7 +252,7 @@ docker run -p 7860:7860 -e GEMINI_API_KEY="your_api_key" exam-slayer-v2
 
 * **OCR Accuracy Dependency**: Heavily smudged scans, slanted handwriting, or degraded documents will limit OCR text quality, causing cascade parsing issues in downstream LLMs.
 * **Context Coverage**: Answers are strictly grounded in uploaded files. If details are missing from course notes, the model infers answers using general logic, which may not match specific syllabus grading keys.
-* **Complex Formatting Ingestion**: Complex hand-drawn circuit schematics, vector diagrams, or multi-dimensional matrices in scanned files might not translate cleanly to textual representations.
+* **Complex Formatting Ingestion**: Complex hand-drawn circuit schematics, vector diagrams, or multi-dimensional matrices in scanned files might not translate cleanly to textual representations. Partly mitigated for PDFs by vision page renders (Oct 2026); DOCX/PPTX remain text-only.
 
 ---
 
