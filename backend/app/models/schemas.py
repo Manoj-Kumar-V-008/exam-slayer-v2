@@ -28,6 +28,7 @@ class SolvedQuestion(BaseModel):
     quick_revision_points: List[str] = Field(default_factory=list, description="Exactly 3 short bullet points, strictly under 8 words per bullet, summarizing key takeaways.")
     memory_trick: Optional[str] = Field(None, description="A memory aid (mnemonic, acronym, etc.) to help remember this answer, strictly under 12 words.")
     related_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
+    sources: List[str] = Field(default_factory=list, description="RAG source citations used, e.g. ['S1 | DBMS Module 1', 'S3 | DBMS Module 2'].")
 
 
 

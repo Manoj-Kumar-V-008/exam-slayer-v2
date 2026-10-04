@@ -98,13 +98,31 @@ def _solve_question_batch(
     """
     Solves a single batch of questions. Automatically handles context compression for the batch.
     If the batch fails, it throws an error so the caller can split the batch dynamically.
+    Uses RAG retrieval when enabled, falling back to keyword compression.
+    Returns (solved_questions, batch_sources).
     """
-    # 1. Compress context for this specific batch of questions
-    compressed_context = compress_study_context_for_batch(
-        study_text=study_text,
-        batch_questions=batch_questions,
-        max_chars=settings.MAX_ANSWER_PACK_CONTEXT_CHARS
-    )
+    # 1. Build grounded context: RAG first, legacy compressor as fallback
+    batch_sources: List[str] = []
+    if settings.RAG_ENABLED:
+        from app.services.rag import retrieve_for_batch, build_rag_context
+
+        retrieved = retrieve_for_batch(study_text, batch_questions)
+        if retrieved:
+            compressed_context = build_rag_context(retrieved, settings.MAX_ANSWER_PACK_CONTEXT_CHARS)
+            batch_sources = [f"{c.id} | {c.source}" for c in retrieved]
+            logger.info(f"RAG context: {len(compressed_context)} chars from {batch_sources}")
+        else:
+            compressed_context = compress_study_context_for_batch(
+                study_text=study_text,
+                batch_questions=batch_questions,
+                max_chars=settings.MAX_ANSWER_PACK_CONTEXT_CHARS
+            )
+    else:
+        compressed_context = compress_study_context_for_batch(
+            study_text=study_text,
+            batch_questions=batch_questions,
+            max_chars=settings.MAX_ANSWER_PACK_CONTEXT_CHARS
+        )
     
     # 2. Format question list
     questions_list_str = ""
@@ -181,7 +199,7 @@ Exam Slayer is a subject-agnostic academic system. It must work equally well for
    - **Tables**: Use markdown tables (`| Column 1 | Column 2 |`) for comparisons and architectures.
 
 7. GROUNDING & DOMAIN KNOWLEDGE EXTENSION:
-   - Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth.
+   - Priority 1 (Source Truth): Use the "=== STUDY MATERIALS ===" as the primary source of truth. Cite every factual claim inline as [S1], [S2], etc. Every answer MUST contain at least one citation.
    - Priority 2 (No Coverage): If the study notes are insufficient, fall back to your general model knowledge silently and seamlessly. Do NOT append any disclaimers like "*(Note: Extended beyond uploaded notes.)*".
 
 8. STRICT NO-IMAGE-PLACEHOLDERS RULE:
@@ -200,6 +218,8 @@ Exam Slayer is a subject-agnostic academic system. It must work equally well for
    - `memory_trick`: A short, high-value "Quick Remember" summary or mnemonic (max 12 words), prefixed with "Quick Remember: " (e.g. `Quick Remember: DBMS ensures data integrity`).
    - `related_assets`: Keep this list empty. The system will populate it programmatically.
 
+    - `sources`: Copy the provided source IDs verbatim.
+
 Keep Unicode math symbols, subscripts, superscripts, and Greek letters (e.g. λ, θ) intact to preserve formula rendering quality.
 
 Return a structured JSON output conforming to the AnswerPack schema containing the list of SolvedQuestion.
@@ -212,7 +232,10 @@ Return a structured JSON output conforming to the AnswerPack schema containing t
         temperature=0.2,
         vision_images=vision_images,
     )
-    return [q.model_dump() for q in answer_pack.questions]
+    solved = [q.model_dump() for q in answer_pack.questions]
+    for sq in solved:
+        sq["sources"] = batch_sources
+    return solved
 
 
 def generate_solved_answers(

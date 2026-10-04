@@ -70,6 +70,12 @@ class Settings(BaseSettings):
     VISION_DPI: int = 120
     VISION_JPEG_QUALITY: int = 70
     VISION_MAX_DIM: int = 1568
+
+    # RAG retrieval (local TF-IDF, no external vector DB)
+    RAG_ENABLED: bool = True
+    RAG_CHUNK_CHARS: int = 1200
+    RAG_OVERLAP: int = 150
+    RAG_TOP_K: int = 4
     
     # Directories (resolved absolute paths)
     UPLOAD_DIR: Path = BASE_DIR / "uploads"

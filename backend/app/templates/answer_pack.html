@@ -63,6 +63,11 @@
                 {% endfor %}
             </ul>
             {% endif %}
+            {% if q.sources %}
+            <div style="margin-top: 8px; font-size: 7.5pt; color: #64748b;">
+                Sources: {{ q.sources | join(', ') }}
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
