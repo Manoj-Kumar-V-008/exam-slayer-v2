@@ -1,5 +1,6 @@
 import time
-from typing import List, Any
+from pathlib import Path
+from typing import List, Any, Optional, Union
 from google import genai
 from google.genai import types
 from app.config import settings
@@ -37,17 +38,45 @@ def _is_transient_error(exc: Exception) -> bool:
     ]
     return any(m in msg for m in transient_markers)
 
+def _build_vision_parts(vision_images: Optional[List[Union[str, Path, bytes]]]):
+    """Load vision images as Gemini Parts. Skips unreadable files, never raises."""
+    if not vision_images:
+        return []
+    parts = []
+    for item in vision_images:
+        try:
+            if isinstance(item, bytes):
+                data, mime = item, "image/jpeg"
+            else:
+                p = Path(str(item))
+                if not p.exists():
+                    logger.warning(f"[vision] skipping missing image: {p}")
+                    continue
+                data = p.read_bytes()
+                mime = "image/png" if p.suffix.lower() == ".png" else "image/jpeg"
+            if not data:
+                continue
+            parts.append(types.Part.from_bytes(data=data, mime_type=mime))
+        except Exception as e:
+            logger.warning(f"[vision] skipping unloadable image {item}: {e}")
+            continue
+    return parts
+
+
 def generate_content_with_routing(
     prompt: str,
     response_schema: Any,
     models: List[str],
     pipeline_name: str,
-    temperature: float = 0.2
+    temperature: float = 0.2,
+    vision_images: Optional[List[Union[str, Path, bytes]]] = None,
 ) -> Any:
     """
     Executes content generation across a prioritized list of Gemini models.
     Supports quota limit detection (instant fallback), transient error retries on the same model,
     and cyclical retry backoff limits (max 3 cycles).
+    When vision_images are provided, sends [prompt, *image_parts] multimodally;
+    otherwise sends text-only (backward compatible).
     """
     if not settings.GEMINI_API_KEY:
         logger.error(f"[{pipeline_name}] GEMINI_API_KEY is not configured in settings.")
@@ -61,6 +90,10 @@ def generate_content_with_routing(
     max_cycles = 3
     last_error: Exception | None = None
     last_model: str = ""
+    vision_parts = _build_vision_parts(vision_images)
+    if vision_parts:
+        logger.info(f"[{pipeline_name}] vision_enabled with {len(vision_parts)} page render(s).")
+    contents: Any = [prompt, *vision_parts] if vision_parts else prompt
     
     for cycle in range(1, max_cycles + 1):
         logger.info(f"[{pipeline_name}] Starting model routing cycle {cycle}/{max_cycles}...")
@@ -79,7 +112,7 @@ def generate_content_with_routing(
                     
                     response = client.models.generate_content(
                         model=model,
-                        contents=prompt,
+                        contents=contents,
                         config=types.GenerateContentConfig(
                             response_mime_type="application/json",
                             response_schema=response_schema,

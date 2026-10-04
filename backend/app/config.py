@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     # Batching and Context Limits
     ANSWER_PACK_BATCH_SIZE: int = 2
     MAX_ANSWER_PACK_CONTEXT_CHARS: int = 40000
+
+    # Vision-grounded generation (multimodal page renders)
+    VISION_ENABLED: bool = True
+    VISION_MAX_PAGES: int = 8
+    VISION_DPI: int = 120
+    VISION_JPEG_QUALITY: int = 70
+    VISION_MAX_DIM: int = 1568
     
     # Directories (resolved absolute paths)
     UPLOAD_DIR: Path = BASE_DIR / "uploads"

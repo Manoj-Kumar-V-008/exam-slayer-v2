@@ -74,8 +74,11 @@ def run_pdf_extraction_pipeline(
         if mode == ProductMode.STUDY_PACK:
             logger.info(f"Extraction complete for job {job_id}. Starting Gemini AI study guide generation...")
             
-            # Call Gemini study guide compiler
-            study_pack_data = clean_study_notes(extraction_result["study_text"])
+            # Call Gemini study guide compiler (vision-grounded when PDF renders exist)
+            study_pack_data = clean_study_notes(
+                extraction_result["study_text"],
+                vision_images=extraction_result.get("vision_images"),
+            )
             
             # Correct asset filenames
             from app.utils.asset_sanitizer import sanitize_embedded_assets
@@ -101,6 +104,7 @@ def run_pdf_extraction_pipeline(
                 "extracted_text_length": extraction_result["extracted_text_length"],
                 "extracted_asset_count": len(extraction_result["assets"]),
                 "assets": extraction_result["assets"],
+                "vision_page_count": extraction_result.get("vision_page_count", 0),
                 "ocr_used": ocr_used,
                 "study_pack": study_pack_data,
                 "image_metadata": image_metadata,
@@ -123,7 +127,8 @@ def run_pdf_extraction_pipeline(
             # Call Gemini solver passing the study materials text and the parsed questions list
             answer_pack_data = generate_solved_answers(
                 study_text=extraction_result["study_text"],
-                parsed_questions=matched_questions
+                parsed_questions=matched_questions,
+                vision_images=extraction_result.get("vision_images"),
             )
             
             # Generate the 'Things to Remember' appendix at the end of the pack
@@ -158,6 +163,7 @@ def run_pdf_extraction_pipeline(
                 "extracted_text_length": extraction_result["extracted_text_length"],
                 "extracted_asset_count": len(extraction_result["assets"]),
                 "assets": extraction_result["assets"],
+                "vision_page_count": extraction_result.get("vision_page_count", 0),
                 "ocr_used": ocr_used,
                 "answer_pack": answer_pack_data,
                 "image_metadata": image_metadata,

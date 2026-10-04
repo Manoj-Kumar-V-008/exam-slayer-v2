@@ -72,6 +72,7 @@ def process_multi_source_job(
     
     study_text_parts: List[str] = []
     all_assets: List[str] = []
+    vision_images: List[str] = []
     ocr_used_any = False
     seen_hashes = set()
     
@@ -94,6 +95,25 @@ def process_multi_source_job(
             ocr_used_any = True
             
         all_assets.extend(result.get("assets", []))
+
+        # Vision-grounded page renders for PDFs (diagram/table fidelity).
+        # Budget is shared across study files; failures fall back to text-only.
+        if settings.VISION_ENABLED and file_ext == "pdf":
+            try:
+                from app.services.vision import render_pdf_page_images
+
+                remaining = settings.VISION_MAX_PAGES - len(vision_images)
+                if remaining > 0:
+                    vision_dir = settings.UPLOAD_DIR / job_id / "vision"
+                    rendered = render_pdf_page_images(
+                        pdf_path=path,
+                        job_id=job_id,
+                        output_dir=vision_dir,
+                        max_pages=remaining,
+                    )
+                    vision_images.extend([str(p) for p in rendered])
+            except Exception as e:
+                logger.warning(f"[vision] render skipped for {name}: {e}")
         
         # Format text with source headers
         source_header = f"=== SOURCE FILE: {name} ===\n"
@@ -139,6 +159,7 @@ def process_multi_source_job(
         f"Multi-source extraction complete for job {job_id}. "
         f"Total study files processed: {len(study_file_paths)}. "
         f"Assets extracted: {len(all_assets)}. "
+        f"Vision page renders: {len(vision_images)}. "
         f"Combined payload text size: {len(combined_raw_text)} chars."
     )
     
@@ -147,6 +168,8 @@ def process_multi_source_job(
         "study_text": safe_study_text,
         "qb_text": safe_qb_text,
         "assets": all_assets,
+        "vision_images": vision_images,
+        "vision_page_count": len(vision_images),
         "ocr_used": ocr_used_any,
         "extracted_text_length": len(study_materials_text)
     }

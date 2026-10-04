@@ -1,6 +1,7 @@
 import json
 import time
-from typing import List, Optional, Any
+from pathlib import Path
+from typing import List, Optional, Any, Union
 from pydantic import ValidationError
 from google import genai
 from google.genai import types
@@ -11,7 +12,18 @@ from app.utils.text_cleaner import compress_study_context_for_batch
 from app.services.gemini_router import generate_content_with_routing
 
 
-def clean_study_notes(raw_text: str) -> dict:
+VISION_INSTRUCTIONS = """
+VISION GROUNDING (attached page renders):
+- {n} rendered PDF page image(s) are attached alongside the extracted text.
+- Use them as source truth for diagrams, tables, formulas, and layout.
+- Transcribe tables/formulas exactly; describe each diagram's components and relationships.
+- When a section explains a diagram, reference its visual structure explicitly.
+"""
+
+VisionImages = Optional[List[Union[str, Path, bytes]]]
+
+
+def clean_study_notes(raw_text: str, vision_images: VisionImages = None) -> dict:
     """
     Sends raw extracted text to Gemini to structure into a student-friendly StudyPack guide.
     
@@ -26,11 +38,13 @@ def clean_study_notes(raw_text: str) -> dict:
         raise ValueError("Gemini API key is missing. Please configure GEMINI_API_KEY in your .env file.")
         
     logger.info("Preparing content for study pack guide generation...")
+    vision_block = VISION_INSTRUCTIONS.format(n=len(vision_images)) if vision_images else ""
+    logger.info(f"Study pack vision images: {len(vision_images) if vision_images else 0}")
     
     prompt = f"""
 You are an expert academic tutor, examiner, and content compiler. 
 Your task is to convert raw extracted academic materials into a premium, clean, exam-ready study guide.
-
+{vision_block}
 === STUDY MATERIALS ===
 {raw_text}
 
@@ -64,7 +78,8 @@ Return a structured JSON output conforming to the StudyPack schema.
             response_schema=StudyPack,
             models=settings.STUDY_PACK_MODELS,
             pipeline_name="STUDY_PACK",
-            temperature=0.2
+            temperature=0.2,
+            vision_images=vision_images,
         )
         return study_pack.model_dump()
     except Exception as e:
@@ -77,7 +92,8 @@ def _solve_question_batch(
     batch_questions: List[dict],
     batch_idx: int,
     total_batches: int,
-    models: List[str]
+    models: List[str],
+    vision_images: VisionImages = None,
 ) -> List[dict]:
     """
     Solves a single batch of questions. Automatically handles context compression for the batch.
@@ -114,7 +130,7 @@ def _solve_question_batch(
 You are an expert AI Solved Answer Pack Compiler.
 Your goal is to solve a specific list of parsed exam questions by referring to the provided study notes.
 The target output is a set of premium, university-exam model answers designed to maximize scoring.
-
+{VISION_INSTRUCTIONS.format(n=len(vision_images)) if vision_images else ""}
 === STUDY MATERIALS ===
 {compressed_context}
 
@@ -193,12 +209,17 @@ Return a structured JSON output conforming to the AnswerPack schema containing t
         response_schema=AnswerPack,
         models=models,
         pipeline_name="ANSWER_PACK",
-        temperature=0.2
+        temperature=0.2,
+        vision_images=vision_images,
     )
     return [q.model_dump() for q in answer_pack.questions]
 
 
-def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> dict:
+def generate_solved_answers(
+    study_text: str,
+    parsed_questions: List[dict],
+    vision_images: VisionImages = None,
+) -> dict:
     """
     Sends study materials and parsed questions to Gemini in batches to solve them.
     Features dynamic batch size reduction if solving fails due to schema validation or other errors.
@@ -254,7 +275,8 @@ def generate_solved_answers(study_text: str, parsed_questions: List[dict]) -> di
                 batch_questions=current_batch,
                 batch_idx=batch_counter,
                 total_batches=total_batches_remaining,
-                models=settings.ANSWER_PACK_MODELS
+                models=settings.ANSWER_PACK_MODELS,
+                vision_images=vision_images,
             )
             all_solved_questions.extend(solved_questions)
             
