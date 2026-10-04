@@ -59,6 +59,8 @@ def generate_content_with_routing(
 
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
     max_cycles = 3
+    last_error: Exception | None = None
+    last_model: str = ""
     
     for cycle in range(1, max_cycles + 1):
         logger.info(f"[{pipeline_name}] Starting model routing cycle {cycle}/{max_cycles}...")
@@ -95,6 +97,8 @@ def generate_content_with_routing(
                     
                 except Exception as e:
                     error_msg = str(e)
+                    last_error = e
+                    last_model = model
                     
                     # 1. Quota Exhaustion -> Switch immediately
                     if _is_quota_error(e):
@@ -137,6 +141,9 @@ def generate_content_with_routing(
             )
             time.sleep(backoff_delay)
             
-    terminal_msg = f"[{pipeline_name}] terminal_failure: All models failed across all {max_cycles} cycles."
+    terminal_msg = (
+        f"[{pipeline_name}] terminal_failure: All models failed across all {max_cycles} cycles. "
+        f"Tried {models}. Last failure on '{last_model}': {last_error}"
+    )
     logger.error(terminal_msg)
-    raise RuntimeError(terminal_msg)
+    raise RuntimeError(terminal_msg) from last_error

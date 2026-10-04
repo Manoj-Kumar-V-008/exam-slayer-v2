@@ -16,24 +16,25 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # Gemini Model and Routing Configs (ordered prioritised lists)
+    # NOTE (Oct 2026): gemini-2.5-* returns 404 for keys without prior usage
+    # ("no longer available to new users") and "gemini-3-flash-preview" is not
+    # a servable ID. Keep only actively-served 3.x IDs first, 2.5 last.
     QUESTION_PARSER_MODELS: list[str] = [
+        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
-        "gemini-3-flash-preview",
         "gemini-2.5-flash-lite"
     ]
     ANSWER_PACK_MODELS: list[str] = [
+        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
-        "gemini-3-flash-preview",
-        "gemini-2.5-flash",
         "gemini-3.5-flash",
         "gemini-2.5-flash-lite"
     ]
     STUDY_PACK_MODELS: list[str] = [
         "gemini-3.5-flash",
-        "gemini-3-flash-preview",
-        "gemini-2.5-flash",
+        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
-        "gemini-2.5-flash-lite"
+        "gemini-2.5-flash"
     ]
 
     @field_validator("QUESTION_PARSER_MODELS", "ANSWER_PACK_MODELS", "STUDY_PACK_MODELS", mode="before")
