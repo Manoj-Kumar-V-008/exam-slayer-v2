@@ -148,15 +148,6 @@ flowchart TD
 
 ---
 
-## 📸 App Preview
-
-<p align="center">
-  <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=800&q=80" width="48%" alt="Upload Interface Preview" />
-  &nbsp;
-  <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80" width="48%" alt="Solved PDF Compilation Preview" />
-</p>
-
----
 
 ## 🚀 Live Demo
 
