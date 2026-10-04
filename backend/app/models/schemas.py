@@ -29,6 +29,8 @@ class SolvedQuestion(BaseModel):
     memory_trick: Optional[str] = Field(None, description="A memory aid (mnemonic, acronym, etc.) to help remember this answer, strictly under 12 words.")
     related_assets: List[str] = Field(default_factory=list, description="Filename pointers of any diagrams/graphics from study materials relevant to this question.")
     sources: List[str] = Field(default_factory=list, description="RAG source citations used, e.g. ['S1 | DBMS Module 1', 'S3 | DBMS Module 2'].")
+    eval_pass: bool = Field(True, description="Quality-gate verdict for this answer.")
+    eval_score: float = Field(1.0, description="Quality-gate score 0-1.")
 
 
 

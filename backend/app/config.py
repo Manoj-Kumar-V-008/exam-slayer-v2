@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     RAG_CHUNK_CHARS: int = 1200
     RAG_OVERLAP: int = 150
     RAG_TOP_K: int = 4
+
+    # Deterministic quality gate (citation + length + leak checks, one retry)
+    EVAL_ENABLED: bool = True
+    EVAL_MIN_CITATIONS: int = 1
+    EVAL_RETRY_ONCE: bool = True
     
     # Directories (resolved absolute paths)
     UPLOAD_DIR: Path = BASE_DIR / "uploads"

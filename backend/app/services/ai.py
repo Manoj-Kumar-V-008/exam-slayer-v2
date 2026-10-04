@@ -235,6 +235,42 @@ Return a structured JSON output conforming to the AnswerPack schema containing t
     solved = [q.model_dump() for q in answer_pack.questions]
     for sq in solved:
         sq["sources"] = batch_sources
+
+    if settings.EVAL_ENABLED:
+        from app.services.eval import evaluate_batch
+
+        ok, avg, results = evaluate_batch(solved, batch_sources)
+        for sq, r in zip(solved, results):
+            sq["eval_pass"] = r["pass"]
+            sq["eval_score"] = r["score"]
+        logger.info(f"[eval] batch {batch_idx} score={avg} pass={ok} issues={[r['issues'] for r in results]}")
+        if not ok and settings.EVAL_RETRY_ONCE:
+            retry_prompt = (
+                prompt
+                + "\n\nSTRICT RETRY — previous output failed quality checks: "
+                + "; ".join(f"Q{i + 1}:{r['issues']}" for i, r in enumerate(results) if not r["pass"])
+                + ". Fix: add missing [S#] citations from the provided chunk IDs, meet length minimums, "
+                + "remove any image placeholders. Return the full corrected JSON."
+            )
+            logger.warning(f"[eval] batch {batch_idx} failed gate, retrying once...")
+            retry_pack = generate_content_with_routing(
+                prompt=retry_prompt,
+                response_schema=AnswerPack,
+                models=models,
+                pipeline_name="ANSWER_PACK",
+                temperature=0.2,
+                vision_images=vision_images,
+            )
+            retry_solved = [q.model_dump() for q in retry_pack.questions]
+            for sq in retry_solved:
+                sq["sources"] = batch_sources
+            rok, ravg, rresults = evaluate_batch(retry_solved, batch_sources)
+            for sq, r in zip(retry_solved, rresults):
+                sq["eval_pass"] = r["pass"]
+                sq["eval_score"] = r["score"]
+            logger.info(f"[eval] retry score={ravg} pass={rok}")
+            if ravg > avg:
+                return retry_solved
     return solved
 
 
